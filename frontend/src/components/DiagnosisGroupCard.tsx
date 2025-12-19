@@ -1,4 +1,5 @@
 import { Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import type { KeyboardEvent } from "react";
 import DictRemoteSelect, { type DictItem } from "@/components/DictRemoteSelect";
 
 const { Text } = Typography;
@@ -34,6 +35,28 @@ export default function DiagnosisGroupCard({
 }: Props) {
   const groupErrorKey = `diagnosis.${diagType}`;
   const groupErrors = errorMap[groupErrorKey] || [];
+
+  const addRow = () => {
+    if (rows.length >= max) return;
+    setRows(reindexSeq([...rows, { seq_no: rows.length + 1, diag_name: "", diag_code: "" }]));
+  };
+
+  const removeRow = (index: number) => {
+    if (rows.length <= min) return;
+    setRows(reindexSeq(rows.filter((_, i) => i !== index)));
+  };
+
+  const handleRowKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.ctrlKey && e.key === "Enter") {
+      e.preventDefault();
+      addRow();
+      return;
+    }
+    if (e.ctrlKey && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      removeRow(index);
+    }
+  };
 
   return (
     <Card
@@ -75,6 +98,7 @@ export default function DiagnosisGroupCard({
                       next[index] = { ...next[index], diag_name: e.target.value };
                       setRows(next);
                     }}
+                    onKeyDown={(e) => handleRowKeyDown(e, index)}
                     placeholder="请输入或通过编码选择回填"
                     status={msgs.length ? "error" : undefined}
                   />
@@ -123,7 +147,7 @@ export default function DiagnosisGroupCard({
                 danger
                 type="link"
                 disabled={rows.length <= min}
-                onClick={() => setRows(reindexSeq(rows.filter((_, i) => i !== index)))}
+                onClick={() => removeRow(index)}
               >
                 删除
               </Button>
@@ -134,10 +158,7 @@ export default function DiagnosisGroupCard({
       <div style={{ marginTop: 8 }}>
         <Button
           type="dashed"
-          onClick={() => {
-            if (rows.length >= max) return;
-            setRows(reindexSeq([...rows, { seq_no: rows.length + 1, diag_name: "", diag_code: "" }]));
-          }}
+          onClick={addRow}
           disabled={rows.length >= max}
         >
           新增
@@ -146,4 +167,3 @@ export default function DiagnosisGroupCard({
     </Card>
   );
 }
-

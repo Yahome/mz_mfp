@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AnchorProps } from "antd";
-import { Anchor, Layout, Space, Typography, Button, Modal, message } from "antd";
+import { Layout, Menu, Space, Typography, Button, Modal, message } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import apiClient from "@/services/apiClient";
 
 const { Header, Sider, Content } = Layout;
 
 const sections = [
-  { key: "base", href: "#base", title: "基础信息" },
-  { key: "diagnosis", href: "#diagnosis", title: "诊疗信息" },
-  { key: "herb", href: "#herb", title: "用药/中草药" },
-  { key: "fee", href: "#fee", title: "费用/只读" },
-  { key: "export", href: "#export", title: "打印/上报" },
+  { key: "base", title: "基础信息" },
+  { key: "diagnosis", title: "诊断信息" },
+  { key: "surgery", title: "手术与操作" },
+  { key: "fee", title: "用药/中草药/费用" },
 ];
 
 type Props = {
@@ -23,8 +21,8 @@ type Props = {
 
 export default function AppLayout({ children, patientNo, showFormNav }: Props) {
   const [collapsed, setCollapsed] = useState(false);
-  const anchorItems: AnchorProps["items"] = showFormNav ? sections : [];
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [session, setSession] = useState<{
     login_name: string;
@@ -165,11 +163,17 @@ export default function AppLayout({ children, patientNo, showFormNav }: Props) {
             style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
           >
             <div style={{ padding: "16px" }}>
-              <Anchor
-                items={anchorItems}
-                affix={true}
-                targetOffset={80}
-                style={{ width: "100%" }}
+              <Menu
+                mode="inline"
+                selectedKeys={[
+                  new URLSearchParams(location.search).get("section") || "base",
+                ]}
+                items={sections.map((s) => ({ key: s.key, label: s.title }))}
+                onClick={(e) => {
+                  const params = new URLSearchParams(location.search);
+                  params.set("section", e.key);
+                  navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+                }}
               />
             </div>
           </Sider>

@@ -55,10 +55,13 @@ export default function HerbDetailCard({ rows, setRows, errorMap, max = 40 }: Pr
             dataIndex: "herb_type",
             width: 220,
             render: (_: any, row, index) => {
+              const rowKey = `herb_detail.${row.seq_no}`;
+              const rowMsgs = errorMap[rowKey] || [];
               const key = `herb_detail.${row.seq_no}.herb_type`;
               const msgs = errorMap[key] || [];
               return (
                 <div>
+                  {!!rowMsgs.length && <Text type="danger">{rowMsgs.join("；")}</Text>}
                   <DictRemoteSelect
                     setCode="HERB_TYPE"
                     value={row.herb_type}
@@ -178,4 +181,3 @@ export default function HerbDetailCard({ rows, setRows, errorMap, max = 40 }: Pr
     </Card>
   );
 }
-

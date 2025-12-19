@@ -1,4 +1,5 @@
 import { Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import type { KeyboardEvent } from "react";
 import DictRemoteSelect from "@/components/DictRemoteSelect";
 
 const { Text } = Typography;
@@ -28,6 +29,41 @@ function reindexSeq(rows: SurgeryRow[]): SurgeryRow[] {
 export default function SurgeryCard({ rows, setRows, errorMap, max = 5 }: Props) {
   const groupErrorKey = "surgery";
   const groupErrors = errorMap[groupErrorKey] || [];
+
+  const addRow = () => {
+    if (rows.length >= max) return;
+    setRows(
+      reindexSeq([
+        ...rows,
+        {
+          seq_no: rows.length + 1,
+          op_name: "",
+          op_code: "",
+          op_time: "",
+          operator_name: "",
+          anesthesia_method: "",
+          anesthesia_doctor: "",
+          surgery_level: undefined,
+        },
+      ]),
+    );
+  };
+
+  const removeRow = (index: number) => {
+    setRows(reindexSeq(rows.filter((_, i) => i !== index)));
+  };
+
+  const handleRowKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.ctrlKey && e.key === "Enter") {
+      e.preventDefault();
+      addRow();
+      return;
+    }
+    if (e.ctrlKey && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      removeRow(index);
+    }
+  };
 
   return (
     <Card
@@ -68,6 +104,7 @@ export default function SurgeryCard({ rows, setRows, errorMap, max = 5 }: Props)
                       next[index] = { ...next[index], op_name: e.target.value };
                       setRows(next);
                     }}
+                    onKeyDown={(e) => handleRowKeyDown(e, index)}
                     status={msgs.length ? "error" : undefined}
                   />
                   {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
@@ -232,7 +269,7 @@ export default function SurgeryCard({ rows, setRows, errorMap, max = 5 }: Props)
             key: "action",
             width: 90,
             render: (_: any, _row, index) => (
-              <Button danger type="link" onClick={() => setRows(reindexSeq(rows.filter((_, i) => i !== index)))}>
+              <Button danger type="link" onClick={() => removeRow(index)}>
                 删除
               </Button>
             ),
@@ -242,24 +279,7 @@ export default function SurgeryCard({ rows, setRows, errorMap, max = 5 }: Props)
       <div style={{ marginTop: 8 }}>
         <Button
           type="dashed"
-          onClick={() => {
-            if (rows.length >= max) return;
-            setRows(
-              reindexSeq([
-                ...rows,
-                {
-                  seq_no: rows.length + 1,
-                  op_name: "",
-                  op_code: "",
-                  op_time: "",
-                  operator_name: "",
-                  anesthesia_method: "",
-                  anesthesia_doctor: "",
-                  surgery_level: undefined,
-                },
-              ]),
-            );
-          }}
+          onClick={addRow}
           disabled={rows.length >= max}
         >
           新增
@@ -268,4 +288,3 @@ export default function SurgeryCard({ rows, setRows, errorMap, max = 5 }: Props)
     </Card>
   );
 }
-
