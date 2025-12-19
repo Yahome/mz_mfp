@@ -1,0 +1,117 @@
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from fastapi import status
+
+from app.core.errors import AppError
+from app.schemas.prefill import FieldValue, PrefillResponse
+from app.schemas.auth import SessionPayload
+from app.services.auth import VisitAccessContext, validate_patient_access
+from app.services.external import ExternalDataAdapter
+from app.services.utils import clean_value, first_value
+
+
+class PrefillService:
+    def __init__(self, adapter: ExternalDataAdapter) -> None:
+        self.adapter = adapter
+
+    def prefill(self, patient_no: str, session: SessionPayload) -> PrefillResponse:
+        try:
+            base_info = self.adapter.fetch_base_info(patient_no)
+        except AppError:
+            raise
+        except Exception as exc:
+            raise AppError(
+                code="external_error",
+                message="外部数据暂不可用，请稍后重试",
+                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ) from exc
+
+        if not base_info:
+            raise AppError(
+                code="not_found",
+                message="未找到就诊记录",
+                http_status=status.HTTP_404_NOT_FOUND,
+            )
+
+        base_map = dict(base_info)
+        visit_context = VisitAccessContext(
+            dept_code=first_value(base_map, ["JZKSDM", "jzksdm", "JZKSDMHIS", "jzksdmhis", "DEPT_CODE", "dept_code"]),
+            doc_code=first_value(base_map, ["JZYS_DM", "JZYSBM", "JZYSBM_CODE", "jzysdm", "DOC_CODE"]),
+        )
+        validate_patient_access(patient_no, session, visit_context)
+
+        try:
+            fee_info = self.adapter.fetch_patient_fee(patient_no)
+        except AppError:
+            raise
+        except Exception as exc:
+            raise AppError(
+                code="external_error",
+                message="外部数据暂不可用，请稍后重试",
+                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ) from exc
+
+        fields = self._build_fields(base_map, dict(fee_info) if fee_info else None)
+        visit_time = first_value(base_map, ["JZSJ", "jzsj"])
+
+        return PrefillResponse(
+            patient_no=patient_no,
+            visit_time=visit_time,
+            record=None,
+            fields=fields,
+            lists={},
+            hints=[],
+        )
+
+    def _build_fields(self, base_map: Dict[str, Any], fee_map: Optional[Dict[str, Any]]) -> Dict[str, FieldValue]:
+        fields: Dict[str, FieldValue] = {}
+        base_fields = [
+            "USERNAME",
+            "JZKH",
+            "XM",
+            "XB",
+            "CSRQ",
+            "HY",
+            "GJ",
+            "MZ",
+            "ZJLB",
+            "ZJHM",
+            "XZZ",
+            "LXDH",
+            "GHSJ",
+            "BDSJ",
+            "JZSJ",
+            "JZKS",
+            "JZKSDM",
+            "JZYS",
+            "JZYSZC",
+        ]
+        for name in base_fields:
+            value = first_value(base_map, [name, name.lower()])
+            fields[name] = FieldValue(value=clean_value(value), source="prefill", readonly=False)
+
+        if fee_map:
+            fee_mapping = {
+                "ZFY": ["ZFY", "总费用"],
+                "ZFJE": ["ZFJE", "自付金额", "zffy", "ZFFY"],
+                "YLFWF": ["YLFWF", "一般医疗服务费"],
+                "ZLCZF": ["ZLCZF", "一般治疗操作费"],
+            }
+            for out_key, candidates in fee_mapping.items():
+                value = first_value(fee_map, candidates)
+                fields[out_key] = FieldValue(value=clean_value(value), source="prefill", readonly=True)
+
+            med_flags = {
+                "XYSY": ["XYSY", "是否使用西药"],
+                "ZCYSY": ["ZCYSY", "是否使用中成药"],
+                "ZYZJSY": ["ZYZJSY", "是否使用中药制剂"],
+                "CTYPSY": ["CTYPSY", "是否使用传统饮片"],
+                "PFKLSY": ["PFKLSY", "是否使用配方颗粒"],
+            }
+            for out_key, candidates in med_flags.items():
+                value = first_value(fee_map, candidates)
+                fields[out_key] = FieldValue(value=clean_value(value), source="prefill", readonly=True)
+
+        return fields

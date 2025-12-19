@@ -1,0 +1,19 @@
+@import "antd/dist/reset.css";
+
+:root {
+  color: #1f2d3d;
+  background-color: #f7f9fc;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.ant-statistic-content-value {
+  font-weight: 600;
+}

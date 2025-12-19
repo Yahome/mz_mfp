@@ -5,3 +5,9 @@
 /3、中医门（急）诊诊疗信息页数据上传模板.xlsx
 /base-info.sql
 /patient_fee.sql
+*/node_modules
+*/.pytest_cache
+*/logs
+*/tests
+*/tmp
+__pycache__/
