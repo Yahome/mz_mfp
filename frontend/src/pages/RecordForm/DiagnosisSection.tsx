@@ -28,16 +28,31 @@ export default function DiagnosisSection({
 }: Props) {
   return (
     <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-      <TcmDiagnosisSection
-        tcmDisease={tcmDisease}
-        setTcmDisease={setTcmDisease}
-        tcmSyndrome={tcmSyndrome}
-        setTcmSyndrome={setTcmSyndrome}
-        errorMap={errorMap}
-      />
+      <div className="group-block">
+        <div className="group-title">中医诊断</div>
+        <div className="compact-table">
+          <TcmDiagnosisSection
+            tcmDisease={tcmDisease}
+            setTcmDisease={setTcmDisease}
+            tcmSyndrome={tcmSyndrome}
+            setTcmSyndrome={setTcmSyndrome}
+            errorMap={errorMap}
+          />
+        </div>
+      </div>
       <Divider style={{ margin: "4px 0" }} />
-      <WesternDiagnosisSection wmMain={wmMain} setWmMain={setWmMain} wmOther={wmOther} setWmOther={setWmOther} errorMap={errorMap} />
+      <div className="group-block">
+        <div className="group-title">西医诊断</div>
+        <div className="compact-table">
+          <WesternDiagnosisSection
+            wmMain={wmMain}
+            setWmMain={setWmMain}
+            wmOther={wmOther}
+            setWmOther={setWmOther}
+            errorMap={errorMap}
+          />
+        </div>
+      </div>
     </Space>
   );
 }
-

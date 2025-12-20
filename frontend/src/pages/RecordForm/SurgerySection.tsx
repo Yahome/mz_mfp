@@ -21,9 +21,18 @@ export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurger
         message="多值列表按 seq_no 保序"
         description="删除/新增会自动重排 seq_no，禁止跳号空洞；条数超限将导致提交校验失败。"
       />
-      <TcmOperationCard rows={tcmOps} setRows={setTcmOps} errorMap={errorMap} />
-      <SurgeryCard rows={surgeries} setRows={setSurgeries} errorMap={errorMap} />
+      <div className="group-block">
+        <div className="group-title">中医治疗性操作</div>
+        <div className="compact-table">
+          <TcmOperationCard rows={tcmOps} setRows={setTcmOps} errorMap={errorMap} />
+        </div>
+      </div>
+      <div className="group-block">
+        <div className="group-title">手术/操作</div>
+        <div className="compact-table">
+          <SurgeryCard rows={surgeries} setRows={setSurgeries} errorMap={errorMap} />
+        </div>
+      </div>
     </Space>
   );
 }
-

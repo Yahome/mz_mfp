@@ -1,4 +1,4 @@
-import { Alert, Space } from "antd";
+import { Space } from "antd";
 import DiagnosisGroupCard, { type DiagnosisRow } from "@/components/DiagnosisGroupCard";
 
 type Props = {
@@ -18,12 +18,6 @@ export default function TcmDiagnosisSection({
 }: Props) {
   return (
     <Space direction="vertical" size="small" style={{ width: "100%" }}>
-      <Alert
-        type="info"
-        showIcon
-        message="动态行快捷键"
-        description="在“诊断名称”输入框内：Ctrl+Enter 新增；Ctrl+Backspace 删除当前行。"
-      />
       <DiagnosisGroupCard
         title="中医主病（必填 1 条）"
         diagType="tcm_disease_main"
@@ -49,4 +43,3 @@ export default function TcmDiagnosisSection({
     </Space>
   );
 }
-

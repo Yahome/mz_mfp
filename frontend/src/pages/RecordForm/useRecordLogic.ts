@@ -1,5 +1,5 @@
-import { createElement, useCallback, useEffect, useMemo, useState } from "react";
-import { Modal, Tag, message } from "antd";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Modal, message } from "antd";
 import type { FormInstance } from "antd";
 import { useNavigate } from "react-router-dom";
 import apiClient from "@/services/apiClient";
@@ -85,6 +85,7 @@ export type RecordResponse = {
 
 export type BaseInfoFormValues = {
   base_info: {
+    _show_source?: boolean;
     username: string;
     jzkh: string;
     xm: string;
@@ -293,12 +294,14 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
 
   const getPrefillValue = useCallback((key: string) => prefill?.fields?.[key]?.value, [prefill]);
 
-  const prefillTag = useCallback(
+  const prefillMeta = useCallback(
     (key: string) => {
       const fv = prefill?.fields?.[key];
       if (!fv) return null;
-      if (fv.readonly) return createElement(Tag, { color: "gold" }, "只读");
-      return createElement(Tag, { color: "blue" }, fv.source || "prefill");
+      return {
+        readonly: Boolean(fv.readonly),
+        source: fv.source || "prefill",
+      };
     },
     [prefill],
   );
@@ -814,8 +817,9 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
     recordStatus,
     prefill,
     validationErrors,
+    validationErrorsCount: validationErrors.length,
     errorMap,
-    prefillTag,
+    prefillMeta,
     medicationSummary,
     feeSummary,
     loadAll,

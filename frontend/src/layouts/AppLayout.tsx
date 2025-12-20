@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Layout, Menu, Space, Typography, Button, Modal, message } from "antd";
+import { Badge, Layout, Menu, Space, Typography, Button, Modal, message } from "antd";
 import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import apiClient from "@/services/apiClient";
@@ -17,9 +17,10 @@ type Props = {
   children: React.ReactNode;
   patientNo?: string;
   showFormNav?: boolean;
+  sectionStats?: Record<string, { errors: number; missing: number }>;
 };
 
-export default function AppLayout({ children, patientNo, showFormNav }: Props) {
+export default function AppLayout({ children, patientNo, showFormNav, sectionStats }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -168,7 +169,25 @@ export default function AppLayout({ children, patientNo, showFormNav }: Props) {
                 selectedKeys={[
                   new URLSearchParams(location.search).get("section") || "base",
                 ]}
-                items={sections.map((s) => ({ key: s.key, label: s.title }))}
+                items={sections.map((s) => {
+                  const stats = sectionStats?.[s.key];
+                  const hasErrors = !!stats?.errors;
+                  const hasMissing = !!stats?.missing;
+                  const badge = hasErrors ? (
+                    <Badge className="menu-badge" count={stats?.errors} size="small" />
+                  ) : hasMissing ? (
+                    <Badge className="menu-badge" count={stats?.missing} size="small" color="#f59e0b" />
+                  ) : null;
+                  return {
+                    key: s.key,
+                    label: (
+                      <Space size="small" style={{ width: "100%", justifyContent: "space-between" }}>
+                        <span>{s.title}</span>
+                        {badge}
+                      </Space>
+                    ),
+                  };
+                })}
                 onClick={(e) => {
                   const params = new URLSearchParams(location.search);
                   params.set("section", e.key);

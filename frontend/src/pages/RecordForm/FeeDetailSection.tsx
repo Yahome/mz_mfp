@@ -1,5 +1,4 @@
-import { Alert, Col, Divider, Form, Input, Row, Space, Statistic, Typography } from "antd";
-import type { ReactNode } from "react";
+import { Alert, Col, Divider, Form, Input, Row, Space, Statistic, Tooltip, Typography } from "antd";
 import HerbDetailCard, { type HerbRow } from "@/components/HerbDetailCard";
 
 const { Paragraph } = Typography;
@@ -17,7 +16,7 @@ type Props = {
   feeSummary: Record<string, any> | null;
   herbRows: HerbRow[];
   setHerbRows: (next: HerbRow[]) => void;
-  prefillTag: (key: string) => ReactNode;
+  prefillMeta?: (key: string) => { readonly: boolean; source: string } | null;
   errorMap: Record<string, string[]>;
 };
 
@@ -26,9 +25,22 @@ export default function FeeDetailSection({
   feeSummary,
   herbRows,
   setHerbRows,
-  prefillTag,
+  prefillMeta,
   errorMap,
 }: Props) {
+  const form = Form.useFormInstance();
+  const showSource = Form.useWatch(["base_info", "_show_source"], form);
+  const meta = (key: string) => prefillMeta?.(key);
+  const sourceTip = (key: string) => {
+    const info = meta(key);
+    if (!info) return null;
+    return (
+      <Tooltip title={`来源：${info.source}${info.readonly ? "（只读）" : ""}`}>
+        <span className="meta-badge">{info.readonly ? "只读" : info.source}</span>
+      </Tooltip>
+    );
+  };
+
   return (
     <Space direction="vertical" size="small" style={{ width: "100%" }}>
       {!medicationSummary && (
@@ -40,63 +52,135 @@ export default function FeeDetailSection({
         />
       )}
 
-      <Row gutter={16}>
-        <Col span={8}>
-          <Form.Item label={<Space size="small">是否使用西药（XYSY）{prefillTag("XYSY")}</Space>}>
-            <Input value={medicationSummary?.xysy || "-"} readOnly />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item label={<Space size="small">是否使用中成药（ZCYSY）{prefillTag("ZCYSY")}</Space>}>
-            <Input value={medicationSummary?.zcysy || "-"} readOnly />
-          </Form.Item>
-        </Col>
-        <Col span={8}>
-          <Form.Item label={<Space size="small">是否使用中药制剂（ZYZJSY）{prefillTag("ZYZJSY")}</Space>}>
-            <Input value={medicationSummary?.zyzjsy || "-"} readOnly />
-          </Form.Item>
-        </Col>
-      </Row>
-      <Row gutter={16}>
-        <Col span={12}>
-          <Form.Item label={<Space size="small">是否使用传统饮片（CTYPSY）{prefillTag("CTYPSY")}</Space>}>
-            <Input value={medicationSummary?.ctypsy || "-"} readOnly />
-          </Form.Item>
-        </Col>
-        <Col span={12}>
-          <Form.Item label={<Space size="small">是否使用配方颗粒（PFKLSY）{prefillTag("PFKLSY")}</Space>}>
-            <Input value={medicationSummary?.pfklsy || "-"} readOnly />
-          </Form.Item>
-        </Col>
-      </Row>
+      <div className="group-block">
+        <div className="group-title">用药标识</div>
+        <Row gutter={16}>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <Space size="small">
+                  是否使用西药（XYSY）
+                  {showSource ? sourceTip("XYSY") : null}
+                </Space>
+              }
+            >
+              <Input value={medicationSummary?.xysy || "-"} readOnly className="readonly-input" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <Space size="small">
+                  是否使用中成药（ZCYSY）
+                  {showSource ? sourceTip("ZCYSY") : null}
+                </Space>
+              }
+            >
+              <Input value={medicationSummary?.zcysy || "-"} readOnly className="readonly-input" />
+            </Form.Item>
+          </Col>
+          <Col span={8}>
+            <Form.Item
+              label={
+                <Space size="small">
+                  是否使用中药制剂（ZYZJSY）
+                  {showSource ? sourceTip("ZYZJSY") : null}
+                </Space>
+              }
+            >
+              <Input value={medicationSummary?.zyzjsy || "-"} readOnly className="readonly-input" />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <Space size="small">
+                  是否使用传统饮片（CTYPSY）
+                  {showSource ? sourceTip("CTYPSY") : null}
+                </Space>
+              }
+            >
+              <Input value={medicationSummary?.ctypsy || "-"} readOnly className="readonly-input" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item
+              label={
+                <Space size="small">
+                  是否使用配方颗粒（PFKLSY）
+                  {showSource ? sourceTip("PFKLSY") : null}
+                </Space>
+              }
+            >
+              <Input value={medicationSummary?.pfklsy || "-"} readOnly className="readonly-input" />
+            </Form.Item>
+          </Col>
+        </Row>
+      </div>
 
-      <HerbDetailCard rows={herbRows} setRows={setHerbRows} errorMap={errorMap} />
+      <div className="group-block">
+        <div className="group-title">中草药明细</div>
+        <div className="compact-table">
+          <HerbDetailCard rows={herbRows} setRows={setHerbRows} errorMap={errorMap} />
+        </div>
+      </div>
 
       <Divider style={{ margin: "4px 0" }} />
 
-      <Row gutter={16}>
-        <Col span={6}>
-          <Statistic title={<Space size="small">总费用（ZFY）{prefillTag("ZFY")}</Space>} value={feeSummary?.zfy ?? "-"} />
-        </Col>
-        <Col span={6}>
-          <Statistic title={<Space size="small">自付金额（ZFJE）{prefillTag("ZFJE")}</Space>} value={feeSummary?.zfje ?? "-"} />
-        </Col>
-        <Col span={6}>
-          <Statistic
-            title={<Space size="small">一般医疗服务费（YLFWF）{prefillTag("YLFWF")}</Space>}
-            value={feeSummary?.ylfwf ?? "-"}
-          />
-        </Col>
-        <Col span={6}>
-          <Statistic
-            title={<Space size="small">一般治疗操作费（ZLCZF）{prefillTag("ZLCZF")}</Space>}
-            value={feeSummary?.zlczf ?? "-"}
-          />
-        </Col>
-      </Row>
-      <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-        费用字段全部来自 HIS 费用视图，直取展示，不做前端费用统计/校验；保存/提交时由后端按外部数据刷新并审计。
-      </Paragraph>
+      <div className="group-block">
+        <div className="group-title">费用概览</div>
+        <Row gutter={16}>
+          <Col span={6}>
+            <Statistic
+              title={
+                <Space size="small">
+                  总费用（ZFY）
+                  {showSource ? sourceTip("ZFY") : null}
+                </Space>
+              }
+              value={feeSummary?.zfy ?? "-"}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title={
+                <Space size="small">
+                  自付金额（ZFJE）
+                  {showSource ? sourceTip("ZFJE") : null}
+                </Space>
+              }
+              value={feeSummary?.zfje ?? "-"}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title={
+                <Space size="small">
+                  一般医疗服务费（YLFWF）
+                  {showSource ? sourceTip("YLFWF") : null}
+                </Space>
+              }
+              value={feeSummary?.ylfwf ?? "-"}
+            />
+          </Col>
+          <Col span={6}>
+            <Statistic
+              title={
+                <Space size="small">
+                  一般治疗操作费（ZLCZF）
+                  {showSource ? sourceTip("ZLCZF") : null}
+                </Space>
+              }
+              value={feeSummary?.zlczf ?? "-"}
+            />
+          </Col>
+        </Row>
+        <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+          费用字段全部来自 HIS 费用视图，直取展示，不做前端费用统计/校验；保存/提交时由后端按外部数据刷新并审计。
+        </Paragraph>
+      </div>
     </Space>
   );
 }

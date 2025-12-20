@@ -1,7 +1,5 @@
-import { Button, Space, Tag, Typography, theme } from "antd";
+import { Button, Descriptions, Space, Switch, Tag, theme } from "antd";
 import { statusLabel, statusTagColor, type RecordStatus } from "@/utils/status";
-
-const { Text } = Typography;
 
 type Props = {
   patientNo: string;
@@ -13,6 +11,8 @@ type Props = {
   loading: boolean;
   saving: boolean;
   canPrint: boolean;
+  showSource: boolean;
+  onToggleShowSource: (checked: boolean) => void;
   onSaveDraft: () => void;
   onSubmit: () => void;
   onPrint: () => void;
@@ -29,6 +29,8 @@ export default function PatientStickyHeader({
   loading,
   saving,
   canPrint,
+  showSource,
+  onToggleShowSource,
   onSaveDraft,
   onSubmit,
   onPrint,
@@ -36,8 +38,20 @@ export default function PatientStickyHeader({
 }: Props) {
   const { token } = theme.useToken();
 
+  const items = [
+    { key: "name", label: "姓名", children: <span className="summary-value">{name || "-"}</span> },
+    { key: "gender", label: "性别", children: <span className="summary-value">{gender || "-"}</span> },
+    {
+      key: "age",
+      label: "年龄",
+      children: <span className="summary-value">{age === null || age === undefined ? "-" : `${age} 岁`}</span>,
+    },
+    { key: "patientNo", label: "门诊号", children: <span className="summary-value"><code>{patientNo}</code></span> },
+  ];
+
   return (
     <div
+      className="sticky-summary"
       style={{
         position: "sticky",
         top: 0,
@@ -48,28 +62,21 @@ export default function PatientStickyHeader({
       }}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <Space size="middle" wrap>
-          <Space size={6}>
-            <Text type="secondary">姓名</Text>
-            <Text strong>{name || "-"}</Text>
-          </Space>
-          <Space size={6}>
-            <Text type="secondary">性别</Text>
-            <Text>{gender || "-"}</Text>
-          </Space>
-          <Space size={6}>
-            <Text type="secondary">年龄</Text>
-            <Text>{age === null || age === undefined ? "-" : `${age} 岁`}</Text>
-          </Space>
-          <Space size={6}>
-            <Text type="secondary">门诊号</Text>
-            <Text code>{patientNo}</Text>
-          </Space>
-        </Space>
+        <Descriptions
+          size="small"
+          column={4}
+          colon={false}
+          items={items}
+          styles={{ label: { color: "rgba(15,23,42,0.55)", fontSize: 12 } }}
+        />
 
         <Space size="small" wrap>
           <Tag color={statusTagColor(recordStatus)}>{statusLabel(recordStatus)}</Tag>
           <Tag color="geekblue">v{version ?? "-"}</Tag>
+          <Space size={6}>
+            <span className="summary-label">来源</span>
+            <Switch size="small" checked={showSource} onChange={onToggleShowSource} />
+          </Space>
           <Button type="primary" onClick={onSaveDraft} loading={saving} disabled={loading}>
             保存
           </Button>
@@ -87,4 +94,3 @@ export default function PatientStickyHeader({
     </div>
   );
 }
-

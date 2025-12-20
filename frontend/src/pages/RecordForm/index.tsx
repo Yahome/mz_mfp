@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Alert, Card, Form, Space, Tag, Typography } from "antd";
+import { Alert, Button, Form, Popover, Space, Typography } from "antd";
 import { useSearchParams } from "react-router-dom";
 import BaseInfoSection from "./BaseInfoSection";
 import DiagnosisSection from "./DiagnosisSection";
@@ -12,6 +12,11 @@ const { Text } = Typography;
 
 type Props = {
   patientNo: string;
+};
+
+export type SectionStats = {
+  errors: number;
+  missing: number;
 };
 
 function asString(value: unknown): string {
@@ -63,7 +68,11 @@ function buildValidationSummary(errors: FieldError[]) {
   );
 }
 
-export default function RecordForm({ patientNo }: Props) {
+type TopStatsHookProps = {
+  onStatsChange?: (stats: Record<string, SectionStats>) => void;
+};
+
+export default function RecordForm({ patientNo, onStatsChange }: Props & TopStatsHookProps) {
   const [form] = Form.useForm<BaseInfoFormValues>();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
@@ -73,9 +82,10 @@ export default function RecordForm({ patientNo }: Props) {
     record,
     recordStatus,
     validationErrors,
+    validationErrorsCount,
     errorMap,
     prefill,
-    prefillTag,
+    prefillMeta,
     medicationSummary,
     feeSummary,
     loadAll,
@@ -100,6 +110,7 @@ export default function RecordForm({ patientNo }: Props) {
   } = useRecordLogic({ patientNo, form });
 
   const baseInfo = Form.useWatch(["base_info"], form);
+  const showSource = Form.useWatch(["base_info", "_show_source"], form);
   const xm = asString(baseInfo?.xm);
   const xb = asString(baseInfo?.xb);
   const csrq = asString(baseInfo?.csrq);
@@ -175,6 +186,33 @@ export default function RecordForm({ patientNo }: Props) {
     );
   }, [prefill?.fields, prefill?.visit_time, record?.record?.visit_time]);
 
+  const groupErrorCounts = useMemo(() => {
+    const bySection: Record<string, number> = { base: 0, diagnosis: 0, surgery: 0, fee: 0 };
+    for (const err of validationErrors) {
+      const section = sectionForField(err.field);
+      bySection[section] = (bySection[section] || 0) + 1;
+    }
+    return bySection;
+  }, [validationErrors]);
+
+  const getSectionStats = useMemo(
+    () => (section: "base" | "diagnosis" | "surgery" | "fee") => ({
+      errors: groupErrorCounts[section] || 0,
+      missing: 0,
+    }),
+    [groupErrorCounts],
+  );
+
+  useEffect(() => {
+    if (!onStatsChange) return;
+    onStatsChange({
+      base: getSectionStats("base"),
+      diagnosis: getSectionStats("diagnosis"),
+      surgery: getSectionStats("surgery"),
+      fee: getSectionStats("fee"),
+    });
+  }, [getSectionStats, onStatsChange]);
+
   return (
     <Space direction="vertical" size="middle" style={{ width: "100%" }}>
       <PatientStickyHeader
@@ -187,6 +225,8 @@ export default function RecordForm({ patientNo }: Props) {
         loading={loading}
         saving={saving}
         canPrint={canPrint}
+        showSource={Boolean(showSource)}
+        onToggleShowSource={(checked) => form.setFieldValue(["base_info", "_show_source"], checked)}
         onSaveDraft={saveDraft}
         onSubmit={submitRecord}
         onPrint={printPreview}
@@ -194,71 +234,98 @@ export default function RecordForm({ patientNo }: Props) {
       />
 
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-        {loadError && <Alert type="error" showIcon message={loadError} />}
+        {loadError && <Alert type="error" showIcon banner style={{ borderRadius: 12 }} message={loadError} />}
         {validationErrors.length > 0 && (
-          <Alert type="error" showIcon message="校验失败" description={buildValidationSummary(validationErrors)} />
+          <Alert
+            type="error"
+            showIcon
+            banner
+            style={{ borderRadius: 12 }}
+            message={
+              <Space size="small" wrap>
+                <Text strong>校验失败</Text>
+                <Text type="secondary">共 {validationErrorsCount} 条</Text>
+                <Popover content={buildValidationSummary(validationErrors)} title="错误明细" placement="bottomLeft">
+                  <Button type="link" size="small" style={{ padding: 0 }}>
+                    查看
+                  </Button>
+                </Popover>
+              </Space>
+            }
+          />
         )}
-        {pediatricsWarning && <Alert type="warning" showIcon message="跨模块逻辑预警" description={pediatricsWarning} />}
+        {pediatricsWarning && (
+          <Alert
+            type="warning"
+            showIcon
+            banner
+            style={{ borderRadius: 12 }}
+            message={
+              <Space size="small" wrap>
+                <Text strong>跨模块预警</Text>
+                <Text type="secondary">{pediatricsWarning}</Text>
+              </Space>
+            }
+          />
+        )}
 
         <Form.Provider
           onFormChange={() => {
             if (validationErrors.length) lastErrorRef.current = null;
           }}
         >
-          <Form form={form} layout="vertical" size="middle" requiredMark="optional">
-            <div style={{ display: currentSection === "base" ? "block" : "none" }}>
-              <Card
-                size="small"
-                title={
-                  <Space size="small">
-                    基础信息
-                    <Tag color="default">就诊时间：{visitTimeText}</Tag>
-                  </Space>
-                }
-              >
-                <BaseInfoSection prefillTag={prefillTag} />
-              </Card>
+          <Form
+            form={form}
+            layout="vertical"
+            size="middle"
+            requiredMark="optional"
+            className="form-shell"
+            initialValues={{ base_info: { _show_source: false } }}
+          >
+            <div className="flat-panel" style={{ display: currentSection === "base" ? "block" : "none" }}>
+              <div className="panel-title">
+                基础信息
+                <span className="panel-subtitle">就诊时间：{visitTimeText}</span>
+              </div>
+              <BaseInfoSection prefillMeta={prefillMeta} />
             </div>
 
-            <div style={{ display: currentSection === "diagnosis" ? "block" : "none" }}>
-              <Card size="small" title="诊断信息">
-                <DiagnosisSection
-                  tcmDisease={tcmDisease}
-                  setTcmDisease={setTcmDisease}
-                  tcmSyndrome={tcmSyndrome}
-                  setTcmSyndrome={setTcmSyndrome}
-                  wmMain={wmMain}
-                  setWmMain={setWmMain}
-                  wmOther={wmOther}
-                  setWmOther={setWmOther}
-                  errorMap={errorMap}
-                />
-              </Card>
+            <div className="flat-panel" style={{ display: currentSection === "diagnosis" ? "block" : "none" }}>
+              <div className="panel-title">诊断信息</div>
+              <DiagnosisSection
+                tcmDisease={tcmDisease}
+                setTcmDisease={setTcmDisease}
+                tcmSyndrome={tcmSyndrome}
+                setTcmSyndrome={setTcmSyndrome}
+                wmMain={wmMain}
+                setWmMain={setWmMain}
+                wmOther={wmOther}
+                setWmOther={setWmOther}
+                errorMap={errorMap}
+              />
             </div>
 
-            <div style={{ display: currentSection === "surgery" ? "block" : "none" }}>
-              <Card size="small" title="手术与操作">
-                <SurgerySection
-                  tcmOps={tcmOps}
-                  setTcmOps={setTcmOps}
-                  surgeries={surgeries}
-                  setSurgeries={setSurgeries}
-                  errorMap={errorMap}
-                />
-              </Card>
+            <div className="flat-panel" style={{ display: currentSection === "surgery" ? "block" : "none" }}>
+              <div className="panel-title">手术与操作</div>
+              <SurgerySection
+                tcmOps={tcmOps}
+                setTcmOps={setTcmOps}
+                surgeries={surgeries}
+                setSurgeries={setSurgeries}
+                errorMap={errorMap}
+              />
             </div>
 
-            <div style={{ display: currentSection === "fee" ? "block" : "none" }}>
-              <Card size="small" title="用药 / 中草药 / 费用">
-                <FeeDetailSection
-                  medicationSummary={medicationSummary}
-                  feeSummary={feeSummary}
-                  herbRows={herbRows}
-                  setHerbRows={setHerbRows}
-                  prefillTag={prefillTag}
-                  errorMap={errorMap}
-                />
-              </Card>
+            <div className="flat-panel" style={{ display: currentSection === "fee" ? "block" : "none" }}>
+              <div className="panel-title">用药 · 中草药 · 费用</div>
+              <FeeDetailSection
+                medicationSummary={medicationSummary}
+                feeSummary={feeSummary}
+                herbRows={herbRows}
+                setHerbRows={setHerbRows}
+                prefillMeta={prefillMeta}
+                errorMap={errorMap}
+              />
             </div>
           </Form>
         </Form.Provider>
