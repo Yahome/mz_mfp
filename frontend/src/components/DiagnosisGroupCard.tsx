@@ -1,5 +1,6 @@
-import { Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import { Button, Input, Space, Tag, Typography } from "antd";
 import DictRemoteSelect, { type DictItem } from "@/components/DictRemoteSelect";
+import "@/styles/plane-table.css";
 
 const { Text } = Typography;
 
@@ -32,9 +33,6 @@ export default function DiagnosisGroupCard({
   codeRequired,
   errorMap,
 }: Props) {
-  const groupErrorKey = `diagnosis.${diagType}`;
-  const groupErrors = errorMap[groupErrorKey] || [];
-
   const addRow = () => {
     if (rows.length >= max) return;
     setRows(reindexSeq([...rows, { seq_no: rows.length + 1, diag_name: "", diag_code: "" }]));
@@ -45,68 +43,61 @@ export default function DiagnosisGroupCard({
     setRows(reindexSeq(rows.filter((_, i) => i !== index)));
   };
 
+  const moveRow = (index: number, direction: -1 | 1) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= rows.length) return;
+    const newRows = [...rows];
+    const [item] = newRows.splice(index, 1);
+    newRows.splice(newIndex, 0, item);
+    setRows(reindexSeq(newRows));
+  };
+
   return (
-    <Card
-      size="small"
-      title={
+    <div style={{ marginBottom: 12 }}>
+      {/* 标题区域 - 放在plane-table外部 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <Space size="small">
-          {title}
+          <Text strong>{title}</Text>
           <Tag color="default">
             {rows.length}/{max}
           </Tag>
         </Space>
-      }
-      style={{ marginBottom: 12 }}
-    >
-      {!!groupErrors.length && (
-        <Typography.Text type="danger" style={{ display: "block", marginBottom: 12 }}>
-          {groupErrors.join("；")}
-        </Typography.Text>
-      )}
-      <Table<DiagnosisRow>
-        size="small"
-        rowKey="seq_no"
-        pagination={false}
-        dataSource={rows}
-        columns={[
-          { title: "序号", dataIndex: "seq_no", width: 70 },
-          {
-            title: "诊断名称",
-            dataIndex: "diag_name",
-            render: (_: any, row, index) => {
-              const key = `diagnosis.${diagType}.${row.seq_no}.diag_name`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <Input
-                    value={row.diag_name}
-                    onChange={(e) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], diag_name: e.target.value };
-                      setRows(next);
-                    }}
-                    placeholder="请输入或通过编码选择回填"
-                    status={msgs.length ? "error" : undefined}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
+      </div>
+
+      {/* plane-table表格 */}
+      <div className="plane-table simple">
+        {/* 列标题 */}
+        <div className="table-head simple">
+          <span className="col category">序号</span>
+          <span className="col code">编码</span>
+          <span className="col name">诊断名称</span>
+          <span className="col action">操作</span>
+        </div>
+
+        {/* 表体 */}
+        <div className="table-body">
+          {rows.map((row, index) => {
+            const nameKey = `diagnosis.${diagType}.${row.seq_no}.diag_name`;
+            const codeKey = `diagnosis.${diagType}.${row.seq_no}.diag_code`;
+            const nameHasError = !!(errorMap[nameKey] || []).length;
+            const codeHasError = !!(errorMap[codeKey] || []).length;
+            const isMain = index === 0;
+
+            return (
+              <div key={row.seq_no} className="table-row">
+                <div className="cell category">
+                  {isMain ? (
+                    <span className="main-tag">主</span>
+                  ) : (
+                    <span className="index-num">{row.seq_no}</span>
+                  )}
                 </div>
-              );
-            },
-          },
-          {
-            title: codeRequired ? "诊断编码（必填）" : "诊断编码（可选）",
-            dataIndex: "diag_code",
-            width: 320,
-            render: (_: any, row, index) => {
-              const key = `diagnosis.${diagType}.${row.seq_no}.diag_code`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
+                <div className="cell code">
                   <DictRemoteSelect
                     setCode={dictSetCode}
                     value={row.diag_code}
                     allowClear
-                    placeholder={`${dictSetCode} 远程检索`}
+                    placeholder={codeRequired ? "诊断编码（必填）" : "诊断编码（可选）"}
                     onChange={(v) => {
                       const next = [...rows];
                       next[index] = { ...next[index], diag_code: v || "" };
@@ -118,38 +109,62 @@ export default function DiagnosisGroupCard({
                       setRows(next);
                     }}
                     style={{ width: "100%" }}
+                    status={codeHasError ? "error" : undefined}
                   />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
                 </div>
-              );
-            },
-          },
-          {
-            title: "操作",
-            key: "action",
-            width: 90,
-            render: (_: any, _row, index) => (
-              <Button
-                danger
-                type="link"
-                disabled={rows.length <= min}
-                onClick={() => removeRow(index)}
-              >
-                删除
-              </Button>
-            ),
-          },
-        ]}
-      />
-      <div style={{ marginTop: 8 }}>
-        <Button
-          type="dashed"
-          onClick={addRow}
-          disabled={rows.length >= max}
-        >
-          新增
-        </Button>
+                <div className="cell name">
+                  <Input
+                    value={row.diag_name}
+                    onChange={(e) => {
+                      const next = [...rows];
+                      next[index] = { ...next[index], diag_name: e.target.value };
+                      setRows(next);
+                    }}
+                    placeholder="请输入或通过编码选择回填"
+                    status={nameHasError ? "error" : undefined}
+                  />
+                </div>
+                <div className="cell action">
+                  <div className="action-buttons">
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => moveRow(index, -1)}
+                      disabled={index === 0}
+                    >
+                      上移
+                    </Button>
+                    <Button
+                      type="link"
+                      size="small"
+                      onClick={() => moveRow(index, 1)}
+                      disabled={index === rows.length - 1}
+                    >
+                      下移
+                    </Button>
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      onClick={() => removeRow(index)}
+                      disabled={rows.length <= min}
+                    >
+                      删除
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 表尾 */}
+        <div className="table-footer">
+          <Button type="dashed" block size="small" onClick={addRow} disabled={rows.length >= max}>
+            + 新增诊断
+          </Button>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }

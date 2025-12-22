@@ -27,6 +27,7 @@ type Props = {
   disabled?: boolean;
   allowClear?: boolean;
   style?: CSSProperties;
+  status?: "error" | "warning";
 };
 
 export default function DictRemoteSelect({
@@ -38,6 +39,7 @@ export default function DictRemoteSelect({
   disabled,
   allowClear,
   style,
+  status,
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<Array<{ value: string; label: string; item: DictItem }>>([]);
@@ -133,6 +135,7 @@ export default function DictRemoteSelect({
         if (item && normalized) onSelectItem?.(item);
       }}
       style={style}
+      status={status}
     />
   );
 }

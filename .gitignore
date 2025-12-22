@@ -11,3 +11,5 @@
 */tests
 */tmp
 __pycache__/
+/.claude
+/example

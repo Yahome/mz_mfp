@@ -1,8 +1,5 @@
-import { Alert, Col, Divider, Form, Input, Row, Space, Tooltip, Typography } from "antd";
+import { Alert, Col, Form, Input, Row, Space, Tooltip } from "antd";
 import HerbDetailCard, { type HerbRow } from "@/components/HerbDetailCard";
-import FeeDisplayComplete from "./FeeDisplayComplete";
-
-const { Paragraph } = Typography;
 
 type MedicationSummary = {
   xysy: string;
@@ -14,16 +11,14 @@ type MedicationSummary = {
 
 type Props = {
   medicationSummary: MedicationSummary | null;
-  feeSummary: Record<string, any> | null;
   herbRows: HerbRow[];
   setHerbRows: (next: HerbRow[]) => void;
   prefillMeta?: (key: string) => { readonly: boolean; source: string } | null;
   errorMap: Record<string, string[]>;
 };
 
-export default function FeeDetailSection({
+export default function MedicationSection({
   medicationSummary,
-  feeSummary,
   herbRows,
   setHerbRows,
   prefillMeta,
@@ -60,7 +55,7 @@ export default function FeeDetailSection({
             <Form.Item
               label={
                 <Space size="small">
-                  是否使用西药（XYSY）
+                  是否使用西药
                   {showSource ? sourceTip("XYSY") : null}
                 </Space>
               }
@@ -72,7 +67,7 @@ export default function FeeDetailSection({
             <Form.Item
               label={
                 <Space size="small">
-                  是否使用中成药（ZCYSY）
+                  是否使用中成药
                   {showSource ? sourceTip("ZCYSY") : null}
                 </Space>
               }
@@ -84,7 +79,7 @@ export default function FeeDetailSection({
             <Form.Item
               label={
                 <Space size="small">
-                  是否使用中药制剂（ZYZJSY）
+                  是否使用中药制剂
                   {showSource ? sourceTip("ZYZJSY") : null}
                 </Space>
               }
@@ -98,7 +93,7 @@ export default function FeeDetailSection({
             <Form.Item
               label={
                 <Space size="small">
-                  是否使用传统饮片（CTYPSY）
+                  是否使用传统饮片
                   {showSource ? sourceTip("CTYPSY") : null}
                 </Space>
               }
@@ -110,7 +105,7 @@ export default function FeeDetailSection({
             <Form.Item
               label={
                 <Space size="small">
-                  是否使用配方颗粒（PFKLSY）
+                  是否使用配方颗粒
                   {showSource ? sourceTip("PFKLSY") : null}
                 </Space>
               }
@@ -127,10 +122,6 @@ export default function FeeDetailSection({
           <HerbDetailCard rows={herbRows} setRows={setHerbRows} errorMap={errorMap} />
         </div>
       </div>
-
-      <Divider style={{ margin: "4px 0" }} />
-
-      <FeeDisplayComplete feeSummary={feeSummary} showSource={showSource} sourceTip={sourceTip} />
     </Space>
   );
 }

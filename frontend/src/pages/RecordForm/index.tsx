@@ -3,8 +3,9 @@ import { Alert, Button, Form, Popover, Space, Typography } from "antd";
 import { useSearchParams } from "react-router-dom";
 import BaseInfoSection from "./BaseInfoSection";
 import DiagnosisSection from "./DiagnosisSection";
-import FeeDetailSection from "./FeeDetailSection";
-import PatientStickyHeader from "./PatientStickyHeader";
+import MedicationSection from "./MedicationSection";
+import FeeSection from "./FeeSection";
+import BoardingPassHeader from "./BoardingPassHeader";
 import SurgerySection from "./SurgerySection";
 import { useRecordLogic, type BaseInfoFormValues, type FieldError } from "./useRecordLogic";
 
@@ -46,12 +47,22 @@ function formatGender(xb: string | undefined): string {
   return v;
 }
 
+function formatDoctorTitle(jzyszc: string | undefined): string {
+  const v = (jzyszc || "").trim();
+  if (!v) return "";
+  if (v === "1") return "主任";
+  if (v === "2") return "副主任";
+  if (v === "3") return "主治";
+  if (v === "4") return "住院医师";
+  return v;
+}
+
 function sectionForField(field: string): string {
   if (field.startsWith("base_info.")) return "base";
   if (field.startsWith("diagnosis.")) return "diagnosis";
   if (field.startsWith("tcm_operation.") || field.startsWith("surgery.")) return "surgery";
-  if (field.startsWith("herb_detail.") || field.startsWith("medication_summary.") || field.startsWith("fee_summary."))
-    return "fee";
+  if (field.startsWith("herb_detail.") || field.startsWith("medication_summary.")) return "medication";
+  if (field.startsWith("fee_summary.")) return "fee";
   return "base";
 }
 
@@ -70,9 +81,10 @@ function buildValidationSummary(errors: FieldError[]) {
 
 type TopStatsHookProps = {
   onStatsChange?: (stats: Record<string, SectionStats>) => void;
+  onValidationErrorsChange?: (errors: Array<{ field: string; message: string; section?: string }>) => void;
 };
 
-export default function RecordForm({ patientNo, onStatsChange }: Props & TopStatsHookProps) {
+export default function RecordForm({ patientNo, onStatsChange, onValidationErrorsChange }: Props & TopStatsHookProps) {
   const [form] = Form.useForm<BaseInfoFormValues>();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
@@ -116,9 +128,14 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
   const csrq = asString(baseInfo?.csrq);
   const jzks = asString(baseInfo?.jzks);
   const jzksdm = asString(baseInfo?.jzksdm);
+  const zjlb = asString(baseInfo?.zjlb);
+  const lxdh = asString(baseInfo?.lxdh);
+  const jzys = asString(baseInfo?.jzys);
+  const jzyszc = asString(baseInfo?.jzyszc);
 
   const age = useMemo(() => calcAge(csrq), [csrq]);
   const gender = useMemo(() => formatGender(xb), [xb]);
+  const doctorTitle = useMemo(() => formatDoctorTitle(jzyszc), [jzyszc]);
 
   const pediatricsWarning = useMemo(() => {
     const deptName = asString(jzks);
@@ -137,7 +154,7 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
 
   const currentSection = useMemo(() => {
     const raw = searchParams.get("section") || "base";
-    const allowed = new Set(["base", "diagnosis", "surgery", "fee"]);
+    const allowed = new Set(["base", "diagnosis", "surgery", "medication", "fee"]);
     return allowed.has(raw) ? raw : "base";
   }, [searchParams]);
 
@@ -149,7 +166,7 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
       setSearchParams(next, { replace: true });
       return;
     }
-    const allowed = new Set(["base", "diagnosis", "surgery", "fee"]);
+    const allowed = new Set(["base", "diagnosis", "surgery", "medication", "fee"]);
     if (!allowed.has(raw)) {
       const next = new URLSearchParams(searchParams);
       next.set("section", "base");
@@ -196,7 +213,7 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
   }, [validationErrors]);
 
   const getSectionStats = useMemo(
-    () => (section: "base" | "diagnosis" | "surgery" | "fee") => ({
+    () => (section: "base" | "diagnosis" | "surgery" | "medication" | "fee") => ({
       errors: groupErrorCounts[section] || 0,
       missing: 0,
     }),
@@ -209,17 +226,34 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
       base: getSectionStats("base"),
       diagnosis: getSectionStats("diagnosis"),
       surgery: getSectionStats("surgery"),
+      medication: getSectionStats("medication"),
       fee: getSectionStats("fee"),
     });
   }, [getSectionStats, onStatsChange]);
 
+  useEffect(() => {
+    if (!onValidationErrorsChange) return;
+    const errors = validationErrors.map((err) => ({
+      field: err.field,
+      message: err.message,
+      section: sectionForField(err.field),
+    }));
+    onValidationErrorsChange(errors);
+  }, [validationErrors, onValidationErrorsChange]);
+
   return (
     <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-      <PatientStickyHeader
+      <BoardingPassHeader
         patientNo={patientNo}
-        name={xm || "-"}
+        name={xm}
         gender={gender}
         age={age}
+        idType={zjlb}
+        visitTime={visitTimeText}
+        phone={lxdh}
+        department={jzks}
+        doctor={jzys}
+        doctorTitle={doctorTitle}
         recordStatus={recordStatus}
         version={record?.record?.version ?? null}
         loading={loading}
@@ -316,16 +350,20 @@ export default function RecordForm({ patientNo, onStatsChange }: Props & TopStat
               />
             </div>
 
-            <div className="flat-panel" style={{ display: currentSection === "fee" ? "block" : "none" }}>
-              <div className="panel-title">用药 · 中草药 · 费用</div>
-              <FeeDetailSection
+            <div className="flat-panel" style={{ display: currentSection === "medication" ? "block" : "none" }}>
+              <div className="panel-title">用药信息</div>
+              <MedicationSection
                 medicationSummary={medicationSummary}
-                feeSummary={feeSummary}
                 herbRows={herbRows}
                 setHerbRows={setHerbRows}
                 prefillMeta={prefillMeta}
                 errorMap={errorMap}
               />
+            </div>
+
+            <div className="flat-panel" style={{ display: currentSection === "fee" ? "block" : "none" }}>
+              <div className="panel-title">费用信息</div>
+              <FeeSection feeSummary={feeSummary} prefillMeta={prefillMeta} />
             </div>
           </Form>
         </Form.Provider>

@@ -1,0 +1,135 @@
+:root {
+  --border-color: #e2e8f0;
+  --bg-light: #f8fafc;
+  --bg-head: #e2e8f0;
+  --brand-color: #2563eb;
+  --text-secondary: #475569;
+}
+
+.plane-table {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-light);
+}
+
+.table-head,
+.table-row {
+  display: grid;
+  grid-template-columns: 60px 150px 200px 150px 130px 160px;
+  gap: 6px;
+  align-items: center;
+}
+
+.table-head.simple,
+.plane-table.simple .table-head {
+  grid-template-columns: 48px minmax(100px, 140px) 1fr 120px;
+}
+
+.table-head.simple .col.action,
+.plane-table.simple .table-head .col.action {
+  justify-self: center;
+}
+
+.table-head.complex,
+.plane-table.complex .table-head {
+  grid-template-columns: 60px 150px 200px 150px 130px 160px;
+}
+
+.plane-table.mini .table-head,
+.plane-table.mini .table-row {
+  grid-template-columns: 50px 120px 1fr 120px;
+}
+
+.plane-table.simple .table-row {
+  grid-template-columns: 48px minmax(100px, 140px) 1fr 120px;
+}
+
+.plane-table.complex .table-row {
+  grid-template-columns: 60px 150px 200px 150px 130px 160px;
+}
+
+.table-head {
+  padding: 8px 12px;
+  background: var(--bg-head);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.table-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: #fff;
+}
+
+.table-row {
+  padding: 8px 12px;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+}
+
+.cell.category {
+  justify-content: center;
+}
+
+.cell.action {
+  justify-content: center;
+}
+
+.main-tag {
+  background: var(--brand-color);
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.index-num {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.table-footer {
+  border-top: 1px dashed var(--border-color);
+  padding: 8px 12px;
+  background: #fff;
+}
+
+@media (max-width: 1200px) {
+  .table-head,
+  .table-row {
+    grid-template-columns: 60px 140px 180px 140px 120px 130px;
+  }
+
+  .plane-table.simple .table-head,
+  .plane-table.simple .table-row {
+    grid-template-columns: 60px 140px 1fr 130px;
+  }
+}
+
+@media (max-width: 768px) {
+  .table-head,
+  .table-row {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+
+  .cell.category {
+    justify-content: flex-start;
+  }
+}

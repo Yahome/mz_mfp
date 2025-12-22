@@ -1,4 +1,3 @@
-import { Space } from "antd";
 import DiagnosisGroupCard, { type DiagnosisRow } from "@/components/DiagnosisGroupCard";
 
 type Props = {
@@ -17,7 +16,7 @@ export default function TcmDiagnosisSection({
   errorMap,
 }: Props) {
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
       <DiagnosisGroupCard
         title="中医主病（必填 1 条）"
         diagType="tcm_disease_main"
@@ -40,6 +39,6 @@ export default function TcmDiagnosisSection({
         codeRequired
         errorMap={errorMap}
       />
-    </Space>
+    </div>
   );
 }

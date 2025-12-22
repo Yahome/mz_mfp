@@ -1,4 +1,3 @@
-import { Space } from "antd";
 import DiagnosisGroupCard, { type DiagnosisRow } from "@/components/DiagnosisGroupCard";
 
 type Props = {
@@ -11,7 +10,7 @@ type Props = {
 
 export default function WesternDiagnosisSection({ wmMain, setWmMain, wmOther, setWmOther, errorMap }: Props) {
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
       <DiagnosisGroupCard
         title="西医主要诊断（必填 1 条）"
         diagType="wm_main"
@@ -34,6 +33,6 @@ export default function WesternDiagnosisSection({ wmMain, setWmMain, wmOther, se
         codeRequired={false}
         errorMap={errorMap}
       />
-    </Space>
+    </div>
   );
 }

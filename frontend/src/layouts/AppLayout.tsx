@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Layout, Menu, Space, Typography, Button, Modal, message } from "antd";
-import { MenuFoldOutlined, MenuUnfoldOutlined } from "@ant-design/icons";
+import { Badge, Layout, Menu, Space, Typography, Button, Modal, message, Divider, Alert } from "antd";
+import { MenuFoldOutlined, MenuUnfoldOutlined, ExclamationCircleOutlined } from "@ant-design/icons";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import apiClient from "@/services/apiClient";
 
@@ -10,17 +10,26 @@ const sections = [
   { key: "base", title: "基础信息" },
   { key: "diagnosis", title: "诊断信息" },
   { key: "surgery", title: "手术与操作" },
-  { key: "fee", title: "用药/中草药/费用" },
+  { key: "medication", title: "用药信息" },
+  { key: "fee", title: "费用信息" },
 ];
+
+type ValidationError = {
+  field: string;
+  message: string;
+  section?: string;
+};
 
 type Props = {
   children: React.ReactNode;
   patientNo?: string;
   showFormNav?: boolean;
   sectionStats?: Record<string, { errors: number; missing: number }>;
+  validationErrors?: ValidationError[];
+  onErrorClick?: (error: ValidationError) => void;
 };
 
-export default function AppLayout({ children, patientNo, showFormNav, sectionStats }: Props) {
+export default function AppLayout({ children, patientNo, showFormNav, sectionStats, validationErrors, onErrorClick }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -163,7 +172,7 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
             onBreakpoint={(broken) => setCollapsed(broken)}
             style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
           >
-            <div style={{ padding: "16px" }}>
+            <div style={{ padding: "16px", height: "100%", display: "flex", flexDirection: "column" }}>
               <Menu
                 mode="inline"
                 selectedKeys={[
@@ -194,6 +203,42 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
                   navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
                 }}
               />
+
+              {!collapsed && validationErrors && validationErrors.length > 0 && (
+                <>
+                  <Divider style={{ margin: "12px 0" }} />
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+                      <Space size="small" style={{ color: "#F5222D" }}>
+                        <ExclamationCircleOutlined />
+                        <Typography.Text strong style={{ color: "#F5222D", fontSize: 13 }}>
+                          错误消息
+                        </Typography.Text>
+                      </Space>
+                      {validationErrors.slice(0, 10).map((error, index) => (
+                        <Alert
+                          key={`${error.field}-${index}`}
+                          message={error.message}
+                          type="error"
+                          showIcon={false}
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 8px",
+                            cursor: "pointer",
+                            marginBottom: 4,
+                          }}
+                          onClick={() => onErrorClick?.(error)}
+                        />
+                      ))}
+                      {validationErrors.length > 10 && (
+                        <Typography.Text type="secondary" style={{ fontSize: 12, paddingLeft: 8 }}>
+                          ...还有 {validationErrors.length - 10} 条错误
+                        </Typography.Text>
+                      )}
+                    </Space>
+                  </div>
+                </>
+              )}
             </div>
           </Sider>
         )}

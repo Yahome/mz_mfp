@@ -1,5 +1,6 @@
-import { Divider, Space } from "antd";
+import { Space } from "antd";
 import type { DiagnosisRow } from "@/components/DiagnosisGroupCard";
+import BoardingPassCard from "@/components/BoardingPassCard";
 import TcmDiagnosisSection from "./TcmDiagnosisSection";
 import WesternDiagnosisSection from "./WesternDiagnosisSection";
 
@@ -27,10 +28,10 @@ export default function DiagnosisSection({
   errorMap,
 }: Props) {
   return (
-    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-      <div className="group-block">
-        <div className="group-title">中医诊断</div>
-        <div className="compact-table">
+    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+      {/* 中医诊断 */}
+      <BoardingPassCard title="中医诊断" variant="success">
+        <div style={{ background: "#FFFFFF", borderRadius: "8px", padding: "12px" }}>
           <TcmDiagnosisSection
             tcmDisease={tcmDisease}
             setTcmDisease={setTcmDisease}
@@ -39,11 +40,11 @@ export default function DiagnosisSection({
             errorMap={errorMap}
           />
         </div>
-      </div>
-      <Divider style={{ margin: "4px 0" }} />
-      <div className="group-block">
-        <div className="group-title">西医诊断</div>
-        <div className="compact-table">
+      </BoardingPassCard>
+
+      {/* 西医诊断 */}
+      <BoardingPassCard title="西医诊断" variant="primary">
+        <div style={{ background: "#FFFFFF", borderRadius: "8px", padding: "12px" }}>
           <WesternDiagnosisSection
             wmMain={wmMain}
             setWmMain={setWmMain}
@@ -52,7 +53,7 @@ export default function DiagnosisSection({
             errorMap={errorMap}
           />
         </div>
-      </div>
+      </BoardingPassCard>
     </Space>
   );
 }
