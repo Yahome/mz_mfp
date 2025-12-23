@@ -1,4 +1,4 @@
-import { Button, Card, Input, InputNumber, Space, Table, Tag, Typography } from "antd";
+import { Button, Input, InputNumber, Space, Tag, Typography } from "antd";
 import DictRemoteSelect from "@/components/DictRemoteSelect";
 
 const { Text } = Typography;
@@ -26,163 +26,152 @@ export default function TcmOperationCard({ rows, setRows, errorMap, max = 10 }: 
   const groupErrorKey = "tcm_operation";
   const groupErrors = errorMap[groupErrorKey] || [];
 
+  const addRow = () => {
+    if (rows.length >= max) return;
+    setRows(reindexSeq([...rows, { seq_no: rows.length + 1, op_name: "", op_code: "", op_times: 0 }]));
+  };
+
+  const removeRow = (index: number) => {
+    setRows(reindexSeq(rows.filter((_, i) => i !== index)));
+  };
+
   return (
-    <Card
-      size="small"
-      title={
+    <div style={{ marginBottom: 12 }}>
+      {/* 标题区域 - 放在plane-table外部 */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <Space size="small">
-          中医治疗性操作
+          <Text strong>中医治疗性操作</Text>
           <Tag color="default">
             {rows.length}/{max}
           </Tag>
         </Space>
-      }
-      style={{ marginBottom: 12 }}
-    >
+      </div>
+
       {!!groupErrors.length && (
         <Typography.Text type="danger" style={{ display: "block", marginBottom: 12 }}>
           {groupErrors.join("；")}
         </Typography.Text>
       )}
-      <Table<TcmOpRow>
-        size="small"
-        rowKey="seq_no"
-        pagination={false}
-        dataSource={rows}
-        columns={[
-          { title: "序号", dataIndex: "seq_no", width: 70 },
-          {
-            title: "操作名称",
-            dataIndex: "op_name",
-            render: (_: any, row, index) => {
-              const key = `tcm_operation.${row.seq_no}.op_name`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <Input
-                    value={row.op_name}
-                    onChange={(e) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], op_name: e.target.value };
-                      setRows(next);
-                    }}
-                    status={msgs.length ? "error" : undefined}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
+
+      {/* plane-table表格 */}
+      <div className="plane-table tcm-op">
+        {/* 列标题 */}
+        <div className="table-head">
+          <span className="col category">序号</span>
+          <span className="col code">中医治疗性操作编码（非手术类）</span>
+          <span className="col name">中医治疗性操作名称（非手术类）</span>
+          <span className="col times">中医治疗性操作次数</span>
+          <span className="col days">中医治疗性操作天数</span>
+          <span className="col action">操作</span>
+        </div>
+
+        {/* 表体 */}
+        <div className="table-body">
+          {rows.map((row, index) => {
+            const nameKey = `tcm_operation.${row.seq_no}.op_name`;
+            const codeKey = `tcm_operation.${row.seq_no}.op_code`;
+            const timesKey = `tcm_operation.${row.seq_no}.op_times`;
+            const daysKey = `tcm_operation.${row.seq_no}.op_days`;
+
+            const nameMsgs = errorMap[nameKey] || [];
+            const codeMsgs = errorMap[codeKey] || [];
+            const timesMsgs = errorMap[timesKey] || [];
+            const daysMsgs = errorMap[daysKey] || [];
+
+            return (
+              <div key={row.seq_no} className="table-row">
+                <div className="cell category">
+                  <span className="index-num">{row.seq_no}</span>
                 </div>
-              );
-            },
-          },
-          {
-            title: "操作编码（ICD9CM3）",
-            dataIndex: "op_code",
-            width: 320,
-            render: (_: any, row, index) => {
-              const key = `tcm_operation.${row.seq_no}.op_code`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <DictRemoteSelect
-                    setCode="ICD9CM3"
-                    value={row.op_code}
-                    allowClear
-                    placeholder="ICD9CM3 远程检索"
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], op_code: v || "" };
-                      setRows(next);
-                    }}
-                    onSelectItem={(item) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], op_code: item.code, op_name: item.name };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
+                <div className="cell code">
+                  <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <DictRemoteSelect
+                      setCode="ICD9CM3"
+                      value={row.op_code}
+                      allowClear
+                      placeholder="远程检索"
+                      onChange={(v) => {
+                        const next = [...rows];
+                        next[index] = { ...next[index], op_code: v || "" };
+                        setRows(next);
+                      }}
+                      onSelectItem={(item) => {
+                        const next = [...rows];
+                        next[index] = { ...next[index], op_code: item.code, op_name: item.name };
+                        setRows(next);
+                      }}
+                      style={{ width: "100%" }}
+                      status={codeMsgs.length ? "error" : undefined}
+                    />
+                    {!!codeMsgs.length && <Text type="danger">{codeMsgs.join("；")}</Text>}
+                  </div>
                 </div>
-              );
-            },
-          },
-          {
-            title: "次数",
-            dataIndex: "op_times",
-            width: 110,
-            render: (_: any, row, index) => {
-              const key = `tcm_operation.${row.seq_no}.op_times`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <InputNumber
-                    min={0}
-                    value={row.op_times}
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], op_times: Number(v ?? 0) };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                    status={msgs.length ? "error" : undefined}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
+                <div className="cell name">
+                  <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <Input
+                      value={row.op_name}
+                      onChange={(e) => {
+                        const next = [...rows];
+                        next[index] = { ...next[index], op_name: e.target.value };
+                        setRows(next);
+                      }}
+                      status={nameMsgs.length ? "error" : undefined}
+                    />
+                    {!!nameMsgs.length && <Text type="danger">{nameMsgs.join("；")}</Text>}
+                  </div>
                 </div>
-              );
-            },
-          },
-          {
-            title: "天数（可选）",
-            dataIndex: "op_days",
-            width: 120,
-            render: (_: any, row, index) => {
-              const key = `tcm_operation.${row.seq_no}.op_days`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <InputNumber
-                    min={0}
-                    value={row.op_days}
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], op_days: v === null ? undefined : Number(v) };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                    status={msgs.length ? "error" : undefined}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
+                <div className="cell times">
+                  <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <InputNumber
+                      min={0}
+                      value={row.op_times}
+                      onChange={(v) => {
+                        const next = [...rows];
+                        next[index] = { ...next[index], op_times: Number(v ?? 0) };
+                        setRows(next);
+                      }}
+                      style={{ width: "100%" }}
+                      status={timesMsgs.length ? "error" : undefined}
+                    />
+                    {!!timesMsgs.length && <Text type="danger">{timesMsgs.join("；")}</Text>}
+                  </div>
                 </div>
-              );
-            },
-          },
-          {
-            title: "操作",
-            key: "action",
-            width: 90,
-            render: (_: any, _row, index) => (
-              <Button
-                danger
-                type="link"
-                onClick={() => setRows(reindexSeq(rows.filter((_, i) => i !== index)))}
-              >
-                删除
-              </Button>
-            ),
-          },
-        ]}
-      />
-      <div style={{ marginTop: 8 }}>
-        <Button
-          type="dashed"
-          onClick={() => {
-            if (rows.length >= max) return;
-            setRows(reindexSeq([...rows, { seq_no: rows.length + 1, op_name: "", op_code: "", op_times: 0 }]));
-          }}
-          disabled={rows.length >= max}
-        >
-          新增
-        </Button>
+                <div className="cell days">
+                  <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+                    <InputNumber
+                      min={0}
+                      value={row.op_days}
+                      onChange={(v) => {
+                        const next = [...rows];
+                        next[index] = { ...next[index], op_days: v === null ? undefined : Number(v) };
+                        setRows(next);
+                      }}
+                      style={{ width: "100%" }}
+                      status={daysMsgs.length ? "error" : undefined}
+                    />
+                    {!!daysMsgs.length && <Text type="danger">{daysMsgs.join("；")}</Text>}
+                  </div>
+                </div>
+                <div className="cell action">
+                  <div className="action-buttons">
+                    <Button type="text" danger size="small" onClick={() => removeRow(index)}>
+                      删除
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* 表尾 */}
+        <div className="table-footer">
+          <Button type="dashed" block size="small" onClick={addRow} disabled={rows.length >= max}>
+            + 新增
+          </Button>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 

@@ -92,6 +92,10 @@ class PrefillService:
             value = first_value(base_map, [name, name.lower()])
             fields[name] = FieldValue(value=clean_value(value), source="prefill", readonly=False)
 
+        zyzkjsj_raw = first_value(base_map, ["ZYZKJSJ", "zyzkjsj", "ZYZDJSJ", "zyzdjsj"])
+        zyzkjsj_value = clean_value(zyzkjsj_raw)
+        fields["ZYZKJSJ"] = FieldValue(value=zyzkjsj_value, source="prefill", readonly=zyzkjsj_value is not None)
+
         if fee_map:
             fee_mapping = {
                 "ZFY": ["ZFY", "总费用"],

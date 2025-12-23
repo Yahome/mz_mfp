@@ -5,7 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import Any, Iterable, Optional
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.dict import DictItem
@@ -604,12 +604,12 @@ class ValidationService:
         if zfy > 0 and total_parts > zfy:
             _add_error(errors, field="fee_summary.zfy", message="总费用需满足 ZFY ≥ 分项费用之和", section="费用", rule="fee_relation")
 
-    def _dict_exists(self, set_code: str, code: str, *, allow_merged: bool = False) -> bool:
-        stmt = select(DictItem.id).where(DictItem.set_code == set_code, DictItem.status == 1)
-        if allow_merged:
-            stmt = stmt.where(or_(DictItem.code == code, DictItem.merged_code == code))
-        else:
-            stmt = stmt.where(DictItem.code == code)
+    def _dict_exists(self, set_code: str, code: str) -> bool:
+        stmt = select(DictItem.id).where(
+            DictItem.set_code == set_code,
+            DictItem.status == 1,
+            DictItem.code == code,
+        )
         return self.db.execute(stmt.limit(1)).first() is not None
 
     def _dict_name(self, set_code: str, code: str) -> Optional[str]:
@@ -657,11 +657,11 @@ class ValidationService:
         for op in record.tcm_operations or []:
             if _is_missing(op.op_code):
                 continue
-            if not self._dict_exists("ICD9CM3", str(op.op_code), allow_merged=True):
+            if not self._dict_exists("ICD9CM3", str(op.op_code)):
                 _add_error(errors, field=f"tcm_operation.{op.seq_no}.op_code", message="操作编码不合法（ICD9CM3）", section="诊疗信息", rule="dict", seq_no=op.seq_no)
 
         for surgery in record.surgeries or []:
-            if not _is_missing(surgery.op_code) and not self._dict_exists("ICD9CM3", str(surgery.op_code), allow_merged=True):
+            if not _is_missing(surgery.op_code) and not self._dict_exists("ICD9CM3", str(surgery.op_code)):
                 _add_error(errors, field=f"surgery.{surgery.seq_no}.op_code", message="手术/操作编码不合法（ICD9CM3）", section="手术/操作", rule="dict", seq_no=surgery.seq_no)
             if not _is_missing(surgery.anesthesia_method) and not self._dict_exists("RC013", str(surgery.anesthesia_method)):
                 _add_error(errors, field=f"surgery.{surgery.seq_no}.anesthesia_method", message="麻醉方式编码不合法（RC013）", section="手术/操作", rule="dict", seq_no=surgery.seq_no)
@@ -683,14 +683,12 @@ class ValidationService:
                 continue
             diag_code = str(diag.diag_code)
             set_code: Optional[str] = None
-            allow_merged = False
             if diag.diag_type in {"wm_main", "wm_other"}:
                 set_code = "ICD10"
-                allow_merged = True
             elif diag.diag_type == "tcm_disease_main":
                 set_code = "TCM_DISEASE"
             elif diag.diag_type == "tcm_syndrome":
                 set_code = "TCM_SYNDROME"
-            if set_code and not self._dict_exists(set_code, diag_code, allow_merged=allow_merged):
+            if set_code and not self._dict_exists(set_code, diag_code):
                 _add_error(errors, field=f"diagnosis.{diag.diag_type}.{diag.seq_no}.diag_code", message=f"诊断编码不合法（{set_code}）", section="诊断", rule="dict", seq_no=diag.seq_no)
 

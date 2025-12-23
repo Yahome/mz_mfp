@@ -128,7 +128,6 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
   const csrq = asString(baseInfo?.csrq);
   const jzks = asString(baseInfo?.jzks);
   const jzksdm = asString(baseInfo?.jzksdm);
-  const zjlb = asString(baseInfo?.zjlb);
   const lxdh = asString(baseInfo?.lxdh);
   const jzys = asString(baseInfo?.jzys);
   const jzyszc = asString(baseInfo?.jzyszc);
@@ -248,7 +247,6 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
         name={xm}
         gender={gender}
         age={age}
-        idType={zjlb}
         visitTime={visitTimeText}
         phone={lxdh}
         department={jzks}
@@ -259,8 +257,6 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
         loading={loading}
         saving={saving}
         canPrint={canPrint}
-        showSource={Boolean(showSource)}
-        onToggleShowSource={(checked) => form.setFieldValue(["base_info", "_show_source"], checked)}
         onSaveDraft={saveDraft}
         onSubmit={submitRecord}
         onPrint={printPreview}
@@ -316,10 +312,9 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
             className="form-shell"
             initialValues={{ base_info: { _show_source: false } }}
           >
-            <div className="flat-panel" style={{ display: currentSection === "base" ? "block" : "none" }}>
+            <div className="flat-panel base-info-panel" style={{ display: currentSection === "base" ? "block" : "none" }}>
               <div className="panel-title">
                 基础信息
-                <span className="panel-subtitle">就诊时间：{visitTimeText}</span>
               </div>
               <BaseInfoSection prefillMeta={prefillMeta} />
             </div>

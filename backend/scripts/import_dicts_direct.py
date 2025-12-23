@@ -24,8 +24,8 @@ RC_CODE_RE = re.compile(r"(RC\\d{3})")
 class DictRow:
     code: str
     name: str
-    extra_code: Optional[str] = None
-    merged_code: Optional[str] = None
+    item_type: Optional[str] = None
+    select_optional: Optional[str] = None
 
 
 def _as_str(value: object) -> Optional[str]:
@@ -48,13 +48,17 @@ def _iter_two_col_sheet(ws) -> Iterator[DictRow]:
 
 def _iter_icd_sheet(ws) -> Iterator[DictRow]:
     for row in ws.iter_rows(min_row=3, values_only=True):
-        code = _as_str(row[0])
-        extra = _as_str(row[1]) if len(row) > 1 else None
-        merged = _as_str(row[2]) if len(row) > 2 else None
+        main_code = _as_str(row[0])
+        extra_code = _as_str(row[1]) if len(row) > 1 else None
+        merged_code = _as_str(row[2]) if len(row) > 2 else None
         name = _as_str(row[3]) if len(row) > 3 else None
+        item_type = _as_str(row[4]) if len(row) > 4 else None
+        select_optional = _as_str(row[5]) if len(row) > 5 else None
+
+        code = merged_code or main_code or extra_code
         if not code or not name:
             continue
-        yield DictRow(code=code, name=name, extra_code=extra, merged_code=merged)
+        yield DictRow(code=code, name=name, item_type=item_type, select_optional=select_optional)
 
 
 def _get_set_name(ws, fallback: str) -> str:
@@ -161,15 +165,15 @@ def main() -> None:
                         "set_code": set_code,
                         "code": row.code,
                         "name": row.name,
-                        "extra_code": row.extra_code,
-                        "merged_code": row.merged_code,
+                        "item_type": row.item_type,
+                        "select_optional": row.select_optional,
                     }
                 )
                 if len(batch) >= args.batch_size:
                     conn.execute(
                         text(
-                            "INSERT INTO dict_item(set_code,code,name,extra_code,merged_code,status,sort_no) "
-                            "VALUES(:set_code,:code,:name,:extra_code,:merged_code,1,0)"
+                            "INSERT INTO dict_item(set_code,code,name,item_type,select_optional,status,sort_no) "
+                            "VALUES(:set_code,:code,:name,:item_type,:select_optional,1,0)"
                         ),
                         batch,
                     )
@@ -178,8 +182,8 @@ def main() -> None:
             if batch:
                 conn.execute(
                     text(
-                        "INSERT INTO dict_item(set_code,code,name,extra_code,merged_code,status,sort_no) "
-                        "VALUES(:set_code,:code,:name,:extra_code,:merged_code,1,0)"
+                        "INSERT INTO dict_item(set_code,code,name,item_type,select_optional,status,sort_no) "
+                        "VALUES(:set_code,:code,:name,:item_type,:select_optional,1,0)"
                     ),
                     batch,
                 )

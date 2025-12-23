@@ -5,9 +5,11 @@ import apiClient from "@/services/apiClient";
 export type DictItem = {
   code: string;
   name: string;
-  extra_code?: string | null;
-  merged_code?: string | null;
+  item_type?: string | null;
+  select_optional?: string | null;
 };
+
+type LabelMode = "code_name" | "name";
 
 type DictSearchResponse = {
   set_code: string;
@@ -28,7 +30,11 @@ type Props = {
   allowClear?: boolean;
   style?: CSSProperties;
   status?: "error" | "warning";
+  labelMode?: LabelMode;
+  resolveValueLabel?: boolean;
 };
+
+const resolvedItemCache = new Map<string, DictItem>();
 
 export default function DictRemoteSelect({
   setCode,
@@ -40,15 +46,24 @@ export default function DictRemoteSelect({
   allowClear,
   style,
   status,
+  labelMode = "code_name",
+  resolveValueLabel = false,
 }: Props) {
+  const normalizedValue = value === undefined || value === null ? undefined : String(value).trim();
   const [loading, setLoading] = useState(false);
   const [options, setOptions] = useState<Array<{ value: string; label: string; item: DictItem }>>([]);
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const debounceRef = useRef<number | null>(null);
+  const [resolvedTick, setResolvedTick] = useState(0);
 
   const pageSize = 30;
+
+  const formatLabel = (item: DictItem) => {
+    if (labelMode === "name") return item.name;
+    return `${item.code} ${item.name}`.trim();
+  };
 
   const fetchPage = async (nextQuery: string, nextPage: number) => {
     setLoading(true);
@@ -59,7 +74,7 @@ export default function DictRemoteSelect({
       });
       const newOptions = resp.data.items.map((item) => ({
         value: item.code,
-        label: `${item.code} ${item.name}`,
+        label: formatLabel(item),
         item,
       }));
 
@@ -90,6 +105,36 @@ export default function DictRemoteSelect({
     setQuery("");
   }, [setCode]);
 
+  useEffect(() => {
+    if (!resolveValueLabel) return;
+    const normalized = normalizedValue ?? "";
+    if (!normalized) return;
+    if (options.some((opt) => opt.value === normalized)) return;
+
+    const cacheKey = `${setCode}::${normalized}`;
+    if (resolvedItemCache.has(cacheKey)) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await apiClient.get<DictSearchResponse>(`/dicts/${setCode}/search`, {
+          params: { q: normalized, page: 1, page_size: 50 },
+          withCredentials: true,
+        });
+        const exact = resp.data.items.find((it) => String(it.code) === normalized) || null;
+        if (exact) resolvedItemCache.set(cacheKey, exact);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setResolvedTick((x) => x + 1);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [normalizedValue, options, resolveValueLabel, setCode]);
+
   const handleSearch = (next: string) => {
     const nextQuery = next.trim();
     setQuery(nextQuery);
@@ -108,16 +153,22 @@ export default function DictRemoteSelect({
   };
 
   const mergedOptions = useMemo(() => {
-    if (!value) return options;
-    if (options.some((opt) => opt.value === value)) return options;
-    return [{ value, label: value, item: { code: value, name: value } }, ...options];
-  }, [options, value]);
+    const normalized = normalizedValue ?? "";
+    if (!normalized) return options;
+    if (options.some((opt) => opt.value === normalized)) return options;
+    const cacheKey = `${setCode}::${normalized}`;
+    const cached = resolvedItemCache.get(cacheKey);
+    if (cached) {
+      return [{ value: normalized, label: formatLabel(cached), item: cached }, ...options];
+    }
+    return [{ value: normalized, label: normalized, item: { code: normalized, name: normalized } }, ...options];
+  }, [formatLabel, options, resolvedTick, setCode, normalizedValue]);
 
   return (
     <Select
       showSearch
       filterOption={false}
-      value={value}
+      value={normalizedValue}
       disabled={disabled}
       allowClear={allowClear}
       placeholder={placeholder}
@@ -129,7 +180,7 @@ export default function DictRemoteSelect({
       }}
       onPopupScroll={handlePopupScroll}
       onChange={(nextValue, option: any) => {
-        const normalized = nextValue ? String(nextValue) : undefined;
+        const normalized = nextValue === undefined || nextValue === null ? undefined : String(nextValue).trim();
         onChange?.(normalized);
         const item = option?.item as DictItem | undefined;
         if (item && normalized) onSelectItem?.(item);

@@ -41,6 +41,29 @@
   grid-template-columns: 50px 120px 1fr 120px;
 }
 
+.plane-table.surgery {
+  overflow-x: auto;
+}
+
+.plane-table.surgery .table-head,
+.plane-table.surgery .table-row {
+  grid-template-columns: 48px minmax(160px, 1fr) 160px 200px 140px 180px 140px 140px 140px;
+}
+
+.plane-table.tcm-op .table-head,
+.plane-table.tcm-op .table-row {
+  grid-template-columns: 48px 220px 1fr 160px 160px 120px;
+}
+
+.plane-table.herb-detail {
+  overflow-x: auto;
+}
+
+.plane-table.herb-detail .table-head,
+.plane-table.herb-detail .table-row {
+  grid-template-columns: 48px 140px 200px 1fr 120px;
+}
+
 .plane-table.simple .table-row {
   grid-template-columns: 48px minmax(100px, 140px) 1fr 120px;
 }
@@ -73,6 +96,7 @@
 .cell {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .cell.category {

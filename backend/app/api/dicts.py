@@ -18,7 +18,7 @@ def get_dict_service(db: Session = Depends(get_db)) -> DictService:
 @router.get("/{set_code}/search", response_model=DictSearchResponse)
 def search_dict(
     set_code: str = Path(..., description="字典集编码，如 RC001/ICD10/ICD9CM3/TCM_DISEASE/TCM_SYNDROME/COUNTRY"),
-    q: str = Query("", description="关键字，支持按 code/name/merged_code/pinyin 模糊检索"),
+    q: str = Query("", description="关键字，支持按 code/name/pinyin 模糊检索"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
     _session=Depends(require_session),

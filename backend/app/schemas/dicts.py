@@ -8,8 +8,8 @@ from pydantic import BaseModel, Field
 class DictItemOut(BaseModel):
     code: str
     name: str
-    extra_code: Optional[str] = None
-    merged_code: Optional[str] = None
+    item_type: Optional[str] = None
+    select_optional: Optional[str] = None
 
 
 class DictSearchResponse(BaseModel):

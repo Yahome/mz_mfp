@@ -389,6 +389,7 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
         jzksdm: asString(prefillResp.data.fields?.JZKSDM?.value),
         jzys: asString(prefillResp.data.fields?.JZYS?.value),
         jzyszc: asString(prefillResp.data.fields?.JZYSZC?.value),
+        zyzkjsj: toDateTimeLocalValue(prefillResp.data.fields?.ZYZKJSJ?.value),
       };
 
       const baseInfo = recordResp
@@ -398,7 +399,9 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
             ghsj: toDateTimeLocalValue(recordResp.payload.base_info.ghsj),
             bdsj: toDateTimeLocalValue(recordResp.payload.base_info.bdsj),
             jzsj: toDateTimeLocalValue(recordResp.payload.base_info.jzsj),
-            zyzkjsj: toDateTimeLocalValue(recordResp.payload.base_info.zyzkjsj),
+            zyzkjsj:
+              toDateTimeLocalValue(recordResp.payload.base_info.zyzkjsj) ||
+              toDateTimeLocalValue(prefillResp.data.fields?.ZYZKJSJ?.value),
           }
         : {
             ...baseFromPrefill,

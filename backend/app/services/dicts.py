@@ -34,7 +34,6 @@ class DictService:
                 or_(
                     DictItem.code.like(like),
                     DictItem.name.like(like),
-                    DictItem.merged_code.like(like),
                     DictItem.pinyin.like(like),
                 )
             )
@@ -55,7 +54,12 @@ class DictService:
             page_size=page_size,
             total=int(total),
             items=[
-                DictItemOut(code=item.code, name=item.name, extra_code=item.extra_code, merged_code=item.merged_code)
+                DictItemOut(
+                    code=item.code,
+                    name=item.name,
+                    item_type=item.item_type,
+                    select_optional=item.select_optional,
+                )
                 for item in items
             ],
         )

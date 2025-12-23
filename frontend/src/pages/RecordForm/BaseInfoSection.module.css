@@ -1,0 +1,177 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.sectionCard {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f766e;
+  border-left: 3px solid rgba(20, 184, 166, 0.65);
+  padding-left: 8px;
+}
+
+.sectionBody {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, #f8fdff 100%);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.1);
+}
+
+.ticketGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  column-gap: 16px;
+  row-gap: 10px;
+  align-items: start;
+}
+
+.fullRow {
+  grid-column: 1 / -1;
+}
+
+.ticketItem {
+  margin-bottom: 0;
+}
+
+.ticketItem :global(.ant-form-item-label) {
+  padding: 0;
+}
+
+.ticketItem :global(.ant-form-item-label > label) {
+  height: auto;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.55);
+}
+
+.stack :global(.ant-form-item-label > label .ant-form-item-optional) {
+  display: none !important;
+}
+
+.ticketItem :global(.ant-form-item-control-input) {
+  min-height: 34px;
+}
+
+.ticketItem :global(.ant-form-item-control-input-content) {
+  padding: 2px 0 0;
+  border-radius: 8px;
+  transition: background-color 120ms ease;
+}
+
+.ticketItem :global(.ant-form-item-control-input-content:focus-within) {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.ticketItem :global(.ant-input),
+.ticketItem :global(.ant-input-affix-wrapper),
+.ticketItem :global(.ant-select-selector) {
+  border: none !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.ticketItem :global(.ant-input) {
+  padding-top: 0 !important;
+  padding-bottom: 6px !important;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ticketItem :global(.ant-input::placeholder) {
+  color: rgba(15, 23, 42, 0.3);
+  font-weight: 400;
+}
+
+.ticketItem :global(.ant-select-single .ant-select-selector) {
+  height: 34px !important;
+}
+
+.ticketItem :global(.ant-select-selection-item) {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ticketItem :global(.ant-select-selection-placeholder) {
+  color: rgba(15, 23, 42, 0.3);
+  font-weight: 400;
+}
+
+.ticketItem :global(.ant-select-arrow),
+.ticketItem :global(.ant-select-clear) {
+  inset-inline-end: 0;
+}
+
+.ticketItem :global(.ant-select-selector .ant-select-selection-search-input) {
+  height: 34px !important;
+}
+
+.ticketItem :global(.ant-select-single:not(.ant-select-customize-input) .ant-select-selector) {
+  padding: 0 18px 0 0 !important;
+}
+
+.ticketItem :global(.ant-input:focus),
+.ticketItem :global(.ant-input-focused),
+.ticketItem :global(.ant-select-focused .ant-select-selector) {
+  border-bottom-color: var(--brand-color) !important;
+}
+
+.ticketItem :global(.ant-form-item-has-error .ant-input),
+.ticketItem :global(.ant-form-item-has-error .ant-select-selector) {
+  border-bottom-color: #ff4d4f !important;
+}
+
+.ticketItem :global(.readonly-input),
+.ticketItem :global(.ant-input[disabled]),
+.ticketItem :global(.ant-select-disabled .ant-select-selector) {
+  background: rgba(15, 23, 42, 0.04) !important;
+  border-bottom-style: dashed !important;
+  color: rgba(15, 23, 42, 0.75) !important;
+}
+
+.ticketItem :global(.ant-select-disabled .ant-select-selection-item),
+.ticketItem :global(.ant-select-disabled .ant-select-selection-placeholder) {
+  color: rgba(15, 23, 42, 0.75) !important;
+}
+
+.ticketItem :global(.ant-form-item-explain) {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.textareaItem :global(.ant-input) {
+  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+  border-radius: 8px !important;
+  padding: 8px 10px !important;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+.textareaItem :global(.ant-input:hover) {
+  border-color: rgba(15, 23, 42, 0.18) !important;
+}
+
+.textareaItem :global(.ant-input:focus),
+.textareaItem :global(.ant-input-focused) {
+  border-color: var(--brand-color) !important;
+}

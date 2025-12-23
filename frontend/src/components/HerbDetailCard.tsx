@@ -1,5 +1,4 @@
-import { Button, Card, Input, InputNumber, Space, Table, Tag, Typography } from "antd";
-import DictRemoteSelect from "@/components/DictRemoteSelect";
+import { Space, Tag, Typography } from "antd";
 
 const { Text } = Typography;
 
@@ -18,166 +17,58 @@ type Props = {
   max?: number;
 };
 
-function reindexSeq(rows: HerbRow[]): HerbRow[] {
-  return rows.map((row, idx) => ({ ...row, seq_no: idx + 1 }));
-}
-
 export default function HerbDetailCard({ rows, setRows, errorMap, max = 40 }: Props) {
-  const groupErrorKey = "herb_detail";
-  const groupErrors = errorMap[groupErrorKey] || [];
+  void setRows;
+  void errorMap;
 
   return (
-    <Card
-      size="small"
-      title={
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <Space size="small">
-          中草药明细
+          <Text strong>中草药明细</Text>
           <Tag color="default">
             {rows.length}/{max}
           </Tag>
         </Space>
-      }
-    >
-      {!!groupErrors.length && (
-        <Typography.Text type="danger" style={{ display: "block", marginBottom: 12 }}>
-          {groupErrors.join("；")}
-        </Typography.Text>
-      )}
-      <Table<HerbRow>
-        size="small"
-        rowKey="seq_no"
-        pagination={false}
-        dataSource={rows}
-        columns={[
-          { title: "序号", dataIndex: "seq_no", width: 70 },
-          {
-            title: "类别（HERB_TYPE）",
-            dataIndex: "herb_type",
-            width: 220,
-            render: (_: any, row, index) => {
-              const rowKey = `herb_detail.${row.seq_no}`;
-              const rowMsgs = errorMap[rowKey] || [];
-              const key = `herb_detail.${row.seq_no}.herb_type`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  {!!rowMsgs.length && <Text type="danger">{rowMsgs.join("；")}</Text>}
-                  <DictRemoteSelect
-                    setCode="HERB_TYPE"
-                    value={row.herb_type}
-                    allowClear
-                    placeholder="远程检索"
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], herb_type: v || "" };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
-                </div>
-              );
-            },
-          },
-          {
-            title: "途径代码（DRUG_ROUTE）",
-            dataIndex: "route_code",
-            width: 320,
-            render: (_: any, row, index) => {
-              const key = `herb_detail.${row.seq_no}.route_code`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <DictRemoteSelect
-                    setCode="DRUG_ROUTE"
-                    value={row.route_code}
-                    allowClear
-                    placeholder="远程检索"
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], route_code: v || "" };
-                      setRows(next);
-                    }}
-                    onSelectItem={(item) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], route_code: item.code, route_name: item.name };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
-                </div>
-              );
-            },
-          },
-          {
-            title: "途径名称（回填）",
-            dataIndex: "route_name",
-            render: (_: any, row) => {
-              const key = `herb_detail.${row.seq_no}.route_name`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <Input value={row.route_name} readOnly status={msgs.length ? "error" : undefined} />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
-                </div>
-              );
-            },
-          },
-          {
-            title: "剂数",
-            dataIndex: "dose_count",
-            width: 120,
-            render: (_: any, row, index) => {
-              const key = `herb_detail.${row.seq_no}.dose_count`;
-              const msgs = errorMap[key] || [];
-              return (
-                <div>
-                  <InputNumber
-                    min={0}
-                    value={row.dose_count}
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], dose_count: Number(v ?? 0) };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
-                    status={msgs.length ? "error" : undefined}
-                  />
-                  {!!msgs.length && <Text type="danger">{msgs.join("；")}</Text>}
-                </div>
-              );
-            },
-          },
-          {
-            title: "操作",
-            key: "action",
-            width: 90,
-            render: (_: any, _row, index) => (
-              <Button danger type="link" onClick={() => setRows(reindexSeq(rows.filter((_, i) => i !== index)))}>
-                删除
-              </Button>
-            ),
-          },
-        ]}
-      />
-      <div style={{ marginTop: 8 }}>
-        <Button
-          type="dashed"
-          onClick={() => {
-            if (rows.length >= max) return;
-            setRows(
-              reindexSeq([
-                ...rows,
-                { seq_no: rows.length + 1, herb_type: "", route_code: "", route_name: "", dose_count: 0 },
-              ]),
-            );
-          }}
-          disabled={rows.length >= max}
-        >
-          新增
-        </Button>
       </div>
-    </Card>
+
+      <div className="plane-table herb-detail">
+        <div className="table-head">
+          <span className="col category">序号</span>
+          <span className="col herb-type">中草药类别（ZCYLB）</span>
+          <span className="col route-code">用药途径代码（YYTJDM）</span>
+          <span className="col route-name">用药途径名称（YYTJMC）</span>
+          <span className="col dose-count">用药剂数（YYJS）</span>
+        </div>
+
+        <div className="table-body">
+          {rows.length ? (
+            rows.map((row) => (
+              <div key={row.seq_no} className="table-row">
+                <div className="cell category">
+                  <span className="index-num">{row.seq_no}</span>
+                </div>
+                <div className="cell herb-type">
+                  <Text style={{ width: "100%" }}>{row.herb_type || "-"}</Text>
+                </div>
+                <div className="cell route-code">
+                  <Text style={{ width: "100%" }}>{row.route_code || "-"}</Text>
+                </div>
+                <div className="cell route-name">
+                  <Text style={{ width: "100%" }}>{row.route_name || "-"}</Text>
+                </div>
+                <div className="cell dose-count">
+                  <Text style={{ width: "100%" }}>{Number.isFinite(row.dose_count) ? row.dose_count : "-"}</Text>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: "10px 12px", background: "#fff" }}>
+              <Text type="secondary">暂无数据</Text>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

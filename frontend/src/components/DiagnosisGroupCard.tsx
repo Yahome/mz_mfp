@@ -1,6 +1,5 @@
 import { Button, Input, Space, Tag, Typography } from "antd";
 import DictRemoteSelect, { type DictItem } from "@/components/DictRemoteSelect";
-import "@/styles/plane-table.css";
 
 const { Text } = Typography;
 

@@ -16,8 +16,8 @@ RC_CODE_RE = re.compile(r"(RC\\d{3})")
 class DictRow:
     code: str
     name: str
-    extra_code: Optional[str] = None
-    merged_code: Optional[str] = None
+    item_type: Optional[str] = None
+    select_optional: Optional[str] = None
 
 
 def _as_str(value: object) -> Optional[str]:
@@ -53,13 +53,17 @@ def _iter_two_col_sheet(ws) -> Iterator[DictRow]:
 
 def _iter_icd_sheet(ws) -> Iterator[DictRow]:
     for row in ws.iter_rows(min_row=3, values_only=True):
-        code = _as_str(row[0])
-        extra = _as_str(row[1]) if len(row) > 1 else None
-        merged = _as_str(row[2]) if len(row) > 2 else None
+        main_code = _as_str(row[0])
+        extra_code = _as_str(row[1]) if len(row) > 1 else None
+        merged_code = _as_str(row[2]) if len(row) > 2 else None
         name = _as_str(row[3]) if len(row) > 3 else None
+        item_type = _as_str(row[4]) if len(row) > 4 else None
+        select_optional = _as_str(row[5]) if len(row) > 5 else None
+
+        code = merged_code or main_code or extra_code
         if not code or not name:
             continue
-        yield DictRow(code=code, name=name, extra_code=extra, merged_code=merged)
+        yield DictRow(code=code, name=name, item_type=item_type, select_optional=select_optional)
 
 
 def _get_rc_set_code(ws) -> Optional[str]:
@@ -167,15 +171,15 @@ def main() -> None:
         for idx, batch in enumerate(_chunked(iterator, args.batch_size), start=1):
             values_sql = []
             for item in batch:
-                extra = "NULL" if item.extra_code is None else f"'{_sql_escape(item.extra_code)}'"
-                merged = "NULL" if item.merged_code is None else f"'{_sql_escape(item.merged_code)}'"
+                item_type = "NULL" if item.item_type is None else f"'{_sql_escape(item.item_type)}'"
+                select_optional = "NULL" if item.select_optional is None else f"'{_sql_escape(item.select_optional)}'"
                 values_sql.append(
-                    f"('{_sql_escape(set_code)}','{_sql_escape(item.code)}','{_sql_escape(item.name)}',{extra},{merged},1,0)"
+                    f"('{_sql_escape(set_code)}','{_sql_escape(item.code)}','{_sql_escape(item.name)}',{item_type},{select_optional},1,0)"
                 )
             insert_sql = (
-                "INSERT INTO dict_item(set_code,code,name,extra_code,merged_code,status,sort_no) VALUES\\n"
+                "INSERT INTO dict_item(set_code,code,name,item_type,select_optional,status,sort_no) VALUES\\n"
                 + ",\\n".join(values_sql)
-                + "\\nON DUPLICATE KEY UPDATE name=VALUES(name), extra_code=VALUES(extra_code), merged_code=VALUES(merged_code), status=VALUES(status), sort_no=VALUES(sort_no);"
+                + "\\nON DUPLICATE KEY UPDATE name=VALUES(name), item_type=VALUES(item_type), select_optional=VALUES(select_optional), status=VALUES(status), sort_no=VALUES(sort_no);"
             )
             _write_sql(outdir / f"{set_code}__02_items_{idx:04d}.sql", insert_sql)
 

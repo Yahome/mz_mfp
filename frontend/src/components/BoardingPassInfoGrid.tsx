@@ -2,7 +2,7 @@ import { theme } from "antd";
 import { CSSProperties, ReactNode } from "react";
 
 type InfoItem = {
-  label: string;
+  label: ReactNode;
   value: ReactNode;
   span?: 1 | 2 | 3 | 4;
 };

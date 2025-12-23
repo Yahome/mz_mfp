@@ -1,5 +1,6 @@
 import { Alert, Col, Form, Input, Row, Space, Tooltip } from "antd";
 import HerbDetailCard, { type HerbRow } from "@/components/HerbDetailCard";
+import styles from "./MedicationSection.module.css";
 
 type MedicationSummary = {
   xysy: string;
@@ -38,7 +39,7 @@ export default function MedicationSection({
   };
 
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
+    <Space direction="vertical" size="small" style={{ width: "100%" }} className={styles.root}>
       {!medicationSummary && (
         <Alert
           type="warning"
@@ -117,7 +118,6 @@ export default function MedicationSection({
       </div>
 
       <div className="group-block">
-        <div className="group-title">中草药明细</div>
         <div className="compact-table">
           <HerbDetailCard rows={herbRows} setRows={setHerbRows} errorMap={errorMap} />
         </div>

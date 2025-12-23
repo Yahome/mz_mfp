@@ -122,7 +122,6 @@ export default function FeeDetailSection({
       </div>
 
       <div className="group-block">
-        <div className="group-title">中草药明细</div>
         <div className="compact-table">
           <HerbDetailCard rows={herbRows} setRows={setHerbRows} errorMap={errorMap} />
         </div>

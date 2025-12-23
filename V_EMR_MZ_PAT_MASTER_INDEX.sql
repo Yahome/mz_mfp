@@ -1,64 +1,79 @@
-select 
-'益阳市第一中医医院' JGMC, --医疗机构名称
-'736798027' ZZJGDM, --组织机构代码
-'益阳市第一中医医院' USERNAME, --对应的系统登录用户名
-b.blh JZKH, --就诊卡号或病案号
-c.BRXM XM, --姓名
-case when c.XB is null or c.XB = '' then '0'
-else c.XB end XB, --性别
+SELECT 
+    '益阳市第一中医医院' AS JGMC,     -- 医疗机构名称
+    '736798027' AS ZZJGDM,            -- 组织机构代码
+    '益阳市第一中医医院' AS USERNAME, -- 用户名
+    b.blh AS JZKH,                    -- 就诊卡号
+    c.BRXM AS XM,                     -- 姓名
+    ISNULL(NULLIF(c.XB, ''), '0') AS XB, -- 性别 (空值默认为0)
 
-case when (c.hyzk is null or c.hyzk = '') then '9'
-else c.hyzk end HY, --性别
- 
+    -- 修正婚姻逻辑
+    CASE c.hyzk 
+        WHEN '1' THEN '1' -- 未婚
+        WHEN '2' THEN '2' -- 已婚
+        WHEN '3' THEN '3' -- 丧偶
+        WHEN '4' THEN '4' -- 离婚
+        ELSE '9' 
+    END AS HY,
 
-CAST(c.CSRQ AS DATE) csrq, --出生日期
+    CAST(c.CSRQ AS DATE) AS csrq,      -- 出生日期
 
-CASE WHEN c.gj is null or c.gj = '' then 'CHN'
-ELSE (select ThreeLetters from JC_COUNTRYC country where c.gj = country.code ) end gj, --国籍
+    -- 国籍优化：改用关联表
+    CASE 
+        WHEN ISNULL(c.gj, '') = '' THEN 'CHN'
+        ELSE country.ThreeLetters 
+    END AS gj,
 
-CASE WHEN C.gj is null or c.gj = '' THEN '1'
-WHEN c.gj = '156' and (c.mz is null or c.mz = '') then '1'
-when c.gj != '156' then '99'
-else (select code2 from JC_NATIONCO nationco where nationco.code = c.mz) end mz, --民族
+    -- 民族优化：改用关联表
+    CASE 
+        WHEN ISNULL(c.gj, '') = '' OR c.gj = '156' THEN 
+            ISNULL(CAST(nationco.code2 AS INT), 1) -- 默认汉族
+        ELSE 99 -- 外国籍
+    END AS mz,
 
-case when (c.sfzh is not null and c.sfzh != '') then '1'
-when (c.sfzh is null and c.sfzh = '') and (d.qtzjlx is not null and d.qtzjlx != '')  
-then (select code2 from jc_qtzjlx zjlx where zjlx.name = d.qtzjlx)
-else '-' end ZJLB, --证件类别：有身份证号则身份证，没身份证则其他证件类别，都无则-
+    -- 证件类别与号码优化：使用 COALESCE 简化优先级判断
+    CASE 
+        WHEN NULLIF(c.sfzh, '') IS NOT NULL THEN '1'
+        WHEN NULLIF(d.qtzjlx, '') IS NOT NULL THEN zjlx.code2
+        ELSE '-' 
+    END AS ZJLB,
 
-case when (c.sfzh is not null and c.sfzh != '') then c.sfzh
-when (c.sfzh is null and c.sfzh = '') and (d.qtzjhm is not null and d.qtzjhm != '')  
-then d.qtzjhm
-else '-' end ZJHM, --证件号码：有身份证则身份证，没身份证则其他证件号码，都无则-
+    COALESCE(NULLIF(c.sfzh, ''), NULLIF(d.qtzjhm, ''), '-') AS ZJHM,
 
-case when (c.jtdz is not null and c.jtdz != '') then c.jtdz
-when (c.csdz is not null and c.csdz != '') then c.csdz
-when (c.GZDWDZ is not null and c.GZDWDZ != '') then c.GZDWDZ
-else '-' end XZZ, --现住址：排序1.家庭住址 2.出生地址 3.工作单位地址
+    -- 地址与电话优先级排序
+    COALESCE(NULLIF(c.jtdz, ''), NULLIF(c.csdz, ''), NULLIF(c.GZDWDZ, ''), '-') AS XZZ,
+    COALESCE(NULLIF(c.brlxfs, ''), NULLIF(d.lxrdh, ''), NULLIF(c.GZDWDH, ''), '-') AS LXDH,
 
-case when (c.brlxfs is not null and c.brlxfs != '') then c.brlxfs
-when (d.lxrdh is not null and d.lxrdh != '') then d.lxrdh
-when (c.GZDWDH is not null and c.GZDWDH != '') then c.GZDWDH
-else '-' end LXDH, --联系电话：排序1.病人电话 2.联系人电话 3.工作单位电话
+    b.GHSJ, -- 挂号时间
+    b.JZSJ AS BDSJ, -- 报到时间
+    b.JZSJ AS JZSJ, -- 就诊时间
 
-b.GHSJ GHSJ, --挂号时间
-b.JZSJ BDSJ, --报道时间
-b.JZSJ JZSJ, --就诊时间
+    e.name AS jzks,
+    e.dept_hqms_code AS jzksdm,
+    a.JSKSDM AS jzksdmhis,
 
-e.name jzks, --接诊科室
-e.dept_hqms_code jzksdm, --标准编码
-a.JSKSDM jzksdmhis, --HIS科室代码
+    f.name AS JZYS,
+    g.YS_TYPEID AS jzyszc,
+    f.EMPLOYEE_ID AS jzysdm,
+    h.djsj AS zyzdjsj
 
-f.name JZYS,
-g.YS_TYPEID jzyszc,
-f.EMPLOYEE_ID jzysdm
+FROM vi_MZYS_JZJL a
+LEFT JOIN VI_MZ_GHXX b ON a.ghxxid = b.ghxxid
+LEFT JOIN yy_brxx c ON b.BRXXID = c.BRXXID
+LEFT JOIN yy_brxx_bc d ON d.BRXXID = c.brxxid
+LEFT JOIN JC_DEPT_PROPERTY e ON e.dept_id = a.jsksdm
+LEFT JOIN JC_EMPLOYEE_PROPERTY f ON f.EMPLOYEE_ID = a.jsysdm
+LEFT JOIN JC_ROLE_DOCTOR g ON g.employee_id = f.EMPLOYEE_ID
+-- 民族与国籍改为连接方式
+LEFT JOIN JC_COUNTRYC country ON c.gj = country.code
+LEFT JOIN JC_NATIONCO nationco ON c.mz = nationco.code
+-- 证件类型映射
+LEFT JOIN jc_qtzjlx zjlx ON zjlx.name = d.qtzjlx
+-- 住院证时间取最大值
+LEFT JOIN (
+    SELECT brxxid, mzh, MAX(djsj) AS djsj 
+    FROM MZYS_ZYZDJ
+    WHERE bscbz = '0' 
+    GROUP BY brxxid, MZH
+) h ON h.brxxid = b.BRXXID AND h.mzh = b.BLH
 
- FROM vi_MZYS_JZJL a
-    LEFT JOIN VI_MZ_GHXX b ON a.ghxxid = b.ghxxid
-    left join yy_brxx c on b.BRXXID = c.BRXXID
-    left join yy_brxx_bc d on d.BRXXID = c.brxxid
-    left join JC_DEPT_PROPERTY e on e.dept_id = a.jsksdm
-    left join JC_EMPLOYEE_PROPERTY f on f.EMPLOYEE_ID = a.jsysdm
-    left join JC_ROLE_DOCTOR g on g.employee_id = f.EMPLOYEE_ID
-    
-    where a.jssj >= '2025-01-01'
+WHERE a.jssj >= '2025-12-01'

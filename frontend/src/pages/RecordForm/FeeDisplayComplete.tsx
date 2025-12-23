@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { Card, Col, Row, Space, Statistic, Tooltip, Typography } from "antd";
+import { useEffect, useState } from "react";
+import { Card, Col, Row, Space, Typography } from "antd";
 import { UpOutlined, DownOutlined } from "@ant-design/icons";
+import BoardingPassInfoGrid from "@/components/BoardingPassInfoGrid";
 
 const { Text } = Typography;
 
@@ -117,11 +118,16 @@ const FEE_CATEGORIES: FeeCategory[] = [
   },
 ];
 
-function formatFeeValue(value: any): string {
+const moneyFormatter = new Intl.NumberFormat("zh-CN", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function formatFeeValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "0.00";
   const num = Number(value);
-  if (isNaN(num)) return "0.00";
-  return num.toFixed(2);
+  if (!Number.isFinite(num)) return "0.00";
+  return moneyFormatter.format(num);
 }
 
 function hasFeeAmount(feeSummary: FeeSummary | null, fields: Array<{ key: string }>): boolean {
@@ -177,43 +183,53 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
   };
 
   return (
-    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+    <Space direction="vertical" size="small" style={{ width: "100%" }}>
       {/* 费用概览 */}
       <Card
         title={
-          <Space>
-            <span style={{ fontSize: 16, fontWeight: 600 }}>费用概览</span>
-          </Space>
+          <Text strong>费用概览</Text>
         }
         bordered
+        size="small"
+        bodyStyle={{ padding: 12 }}
         style={{ borderRadius: "8px" }}
       >
-        <Row gutter={[16, 16]}>
-          <Col span={8}>
-            <Statistic
-              title={<Space size="small">总费用{showSource && sourceTip ? sourceTip("ZFY") : null}</Space>}
-              value={formatFeeValue(feeSummary?.zfy)}
-              precision={2}
-              valueStyle={{ color: "#1890FF", fontSize: 24, fontWeight: 600 }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title={<Space size="small">自付金额{showSource && sourceTip ? sourceTip("ZFJE") : null}</Space>}
-              value={formatFeeValue(feeSummary?.zfje)}
-              precision={2}
-              valueStyle={{ color: "#52C41A", fontSize: 24, fontWeight: 600 }}
-            />
-          </Col>
-          <Col span={8}>
-            <Statistic
-              title={<Space size="small">医保支付{showSource && sourceTip ? sourceTip("YBJJZF") : null}</Space>}
-              value={formatFeeValue(feeSummary?.ybjjzf)}
-              precision={2}
-              valueStyle={{ color: "#FA8C16", fontSize: 24, fontWeight: 600 }}
-            />
-          </Col>
-        </Row>
+        <BoardingPassInfoGrid
+          items={[
+            {
+              label: (
+                <Space size="small">
+                  总费用
+                  {showSource && sourceTip ? sourceTip("ZFY") : null}
+                </Space>
+              ),
+              value: <Text strong style={{ fontSize: 18, color: "#1890FF" }}>{formatFeeValue(feeSummary?.zfy)}</Text>,
+            },
+            {
+              label: (
+                <Space size="small">
+                  自付金额
+                  {showSource && sourceTip ? sourceTip("ZFJE") : null}
+                </Space>
+              ),
+              value: <Text strong style={{ fontSize: 18, color: "#52C41A" }}>{formatFeeValue(feeSummary?.zfje)}</Text>,
+            },
+            {
+              label: (
+                <Space size="small">
+                  医保支付
+                  {showSource && sourceTip ? sourceTip("YBJJZF") : null}
+                </Space>
+              ),
+              value: <Text strong style={{ fontSize: 18, color: "#FA8C16" }}>{formatFeeValue(feeSummary?.ybjjzf)}</Text>,
+            },
+          ]}
+          style={{
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "8px 16px",
+            padding: "10px 12px",
+          }}
+        />
       </Card>
 
       {/* 费用分类明细 */}
@@ -225,7 +241,7 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
           <Card
             key={categoryIndex}
             title={
-              <Space>
+              <Space size="small">
                 <span>{category.icon}</span>
                 <span style={{ fontWeight: 600 }}>{category.title}</span>
                 <Text type="secondary" style={{ fontSize: 13 }}>
@@ -241,7 +257,7 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
             extra={
               <a
                 onClick={() => toggleCategory(categoryIndex)}
-                style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 4 }}
+                style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}
               >
                 {isExpanded ? (
                   <>
@@ -255,13 +271,15 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
               </a>
             }
             bordered
+            size="small"
+            bodyStyle={{ padding: 12 }}
             style={{
               borderRadius: "8px",
               borderLeft: hasAmount ? "4px solid #52C41A" : undefined,
             }}
           >
             {isExpanded && (
-              <Row gutter={[16, 16]}>
+              <Row gutter={[12, 10]}>
                 {category.fields.map((field) => (
                   <Col span={12} key={field.key}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -277,7 +295,7 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
                         </Text>
                         {showSource && sourceTip && sourceTip(field.key.toUpperCase())}
                       </Space>
-                      <Text strong style={{ fontSize: 16, color: "#1890FF" }}>
+                      <Text strong style={{ fontSize: 14, color: "#1890FF" }}>
                         {formatFeeValue(feeSummary?.[field.key])}
                       </Text>
                     </div>
