@@ -1,3 +1,4 @@
+from pathlib import Path
 from functools import lru_cache
 from typing import Literal, Optional
 
@@ -5,8 +6,16 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_BACKEND_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+_PROJECT_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(str(_BACKEND_ENV_FILE), str(_PROJECT_ENV_FILE)),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "mz_mfp"
     app_env: str = "dev"

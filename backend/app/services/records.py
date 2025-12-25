@@ -436,7 +436,7 @@ class RecordService:
             "mzf": _get_decimal(["MZF", "麻醉费"]),
             "ssf": _get_decimal(["SSF", "手术费"]),
             "kff": _get_decimal(["KFF", "康复费"]),
-            "zyl_zyzd": _get_decimal(["ZYL_ZYZD", "中医诊断", "中医辨证论治费", "中医诊断费"]),
+            "zyl_zyzd": _get_decimal(["ZYL_ZYZD", "中医辨证论治费", "中医诊断费", "中医诊断"]),
             "zyzl": _get_decimal(["ZYZL", "中医治疗", "中医治疗费用"]),
             "zywz": _get_decimal(["ZYWZ", "中医外治"]),
             "zygs": _get_decimal(["ZYGS", "中医骨伤"]),

@@ -1,6 +1,7 @@
 import { Alert, Col, Divider, Form, Input, Row, Space, Tooltip, Typography } from "antd";
 import HerbDetailCard, { type HerbRow } from "@/components/HerbDetailCard";
 import FeeDisplayComplete from "./FeeDisplayComplete";
+import { formatYesNoRc016 } from "@/utils/valueFormat";
 
 const { Paragraph } = Typography;
 
@@ -65,7 +66,7 @@ export default function FeeDetailSection({
                 </Space>
               }
             >
-              <Input value={medicationSummary?.xysy || "-"} readOnly className="readonly-input" />
+              <Input value={formatYesNoRc016(medicationSummary?.xysy)} readOnly className="readonly-input" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -77,7 +78,7 @@ export default function FeeDetailSection({
                 </Space>
               }
             >
-              <Input value={medicationSummary?.zcysy || "-"} readOnly className="readonly-input" />
+              <Input value={formatYesNoRc016(medicationSummary?.zcysy)} readOnly className="readonly-input" />
             </Form.Item>
           </Col>
           <Col span={8}>
@@ -89,7 +90,7 @@ export default function FeeDetailSection({
                 </Space>
               }
             >
-              <Input value={medicationSummary?.zyzjsy || "-"} readOnly className="readonly-input" />
+              <Input value={formatYesNoRc016(medicationSummary?.zyzjsy)} readOnly className="readonly-input" />
             </Form.Item>
           </Col>
         </Row>
@@ -103,7 +104,7 @@ export default function FeeDetailSection({
                 </Space>
               }
             >
-              <Input value={medicationSummary?.ctypsy || "-"} readOnly className="readonly-input" />
+              <Input value={formatYesNoRc016(medicationSummary?.ctypsy)} readOnly className="readonly-input" />
             </Form.Item>
           </Col>
           <Col span={12}>
@@ -115,7 +116,7 @@ export default function FeeDetailSection({
                 </Space>
               }
             >
-              <Input value={medicationSummary?.pfklsy || "-"} readOnly className="readonly-input" />
+              <Input value={formatYesNoRc016(medicationSummary?.pfklsy)} readOnly className="readonly-input" />
             </Form.Item>
           </Col>
         </Row>

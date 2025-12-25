@@ -35,8 +35,8 @@ const FEE_CATEGORIES: FeeCategory[] = [
     icon: "🔬",
     fields: [
       { label: "(5) 病理诊断费", key: "blzdf" },
-      { label: "(6) 实验室诊断费", key: "sydf" },
-      { label: "(7) 影像学诊断费", key: "yxzdf" },
+      { label: "(6) 实验室诊断费", key: "zdf" },
+      { label: "(7) 影像学诊断费", key: "yxxzdf" },
       { label: "(8) 临床诊断项目费", key: "lczdxmf" },
     ],
   },
@@ -44,8 +44,8 @@ const FEE_CATEGORIES: FeeCategory[] = [
     title: "治疗类",
     icon: "💉",
     fields: [
-      { label: "(9) 非手术治疗项目费", key: "fssxmf" },
-      { label: "临床物理治疗费", key: "lcwlzlf" },
+      { label: "(9) 非手术治疗项目费", key: "fsszlxmf" },
+      { label: "临床物理治疗费", key: "zlf" },
       { label: "(10) 手术治疗费", key: "sszlf" },
       { label: "手术费", key: "ssf", subKey: "手术" },
       { label: "麻醉费", key: "mzf", subKey: "麻醉" },
@@ -60,8 +60,8 @@ const FEE_CATEGORIES: FeeCategory[] = [
     title: "中医类",
     icon: "⚕️",
     fields: [
-      { label: "(12) 中医治疗费", key: "zyzlf" },
-      { label: "中医辨证论治费", key: "zybzlzf" },
+      { label: "(12) 中医治疗费", key: "zyzl" },
+      { label: "中医辨证论治费", key: "zyl_zyzd" },
       { label: "中医辨证论治会诊费", key: "zybzlzhzf" },
       { label: "中医外治", key: "zywz" },
       { label: "中医骨伤", key: "zygs" },
@@ -69,7 +69,7 @@ const FEE_CATEGORIES: FeeCategory[] = [
       { label: "中医推拿治疗", key: "zytnzl" },
       { label: "中医肛肠治疗", key: "zygczl" },
       { label: "中医特殊治疗", key: "zytszl" },
-      { label: "中药特殊调配加工", key: "zytspjg" },
+      { label: "中药特殊调配加工", key: "zytstpjg" },
       { label: "辨证施膳", key: "bzss" },
     ],
   },
@@ -78,7 +78,7 @@ const FEE_CATEGORIES: FeeCategory[] = [
     icon: "💊",
     fields: [
       { label: "(13) 西药费", key: "xyf" },
-      { label: "抗菌药物费用", key: "kjywfy" },
+      { label: "抗菌药物费用", key: "kjywf" },
     ],
   },
   {
@@ -86,8 +86,8 @@ const FEE_CATEGORIES: FeeCategory[] = [
     icon: "🌿",
     fields: [
       { label: "(14) 中成药费", key: "zcyf" },
-      { label: "(15) 中草药费", key: "zcyf2" },
-      { label: "医疗机构中药制剂费", key: "yljgzyzjf" },
+      { label: "(15) 中草药费", key: "zcyf1" },
+      { label: "医疗机构中药制剂费", key: "zyzjf" },
       { label: "配方颗粒费", key: "pfklf" },
     ],
   },
@@ -96,19 +96,19 @@ const FEE_CATEGORIES: FeeCategory[] = [
     icon: "🩸",
     fields: [
       { label: "(16) 血费", key: "xf" },
-      { label: "(17) 白蛋白类制品费", key: "bdb_f" },
-      { label: "(18) 球蛋白类制品费", key: "qdb_f" },
-      { label: "(19) 凝血因子类制品费", key: "nxyzzpf" },
-      { label: "(20) 细胞因子类制品费", key: "xbyzzpf" },
+      { label: "(17) 白蛋白类制品费", key: "bdbblzpf" },
+      { label: "(18) 球蛋白类制品费", key: "qdbblzpf" },
+      { label: "(19) 凝血因子类制品费", key: "nxyzlzpf" },
+      { label: "(20) 细胞因子类制品费", key: "xbyzlzpf" },
     ],
   },
   {
     title: "耗材类",
     icon: "🔧",
     fields: [
-      { label: "(21) 检查用一次性医用材料费", key: "jcyycxclf" },
-      { label: "(22) 治疗用一次性医用材料费", key: "zlyycxclf" },
-      { label: "(23) 手术用一次性医用材料费", key: "ssyycxclf" },
+      { label: "(21) 检查用一次性医用材料费", key: "jcyyclf" },
+      { label: "(22) 治疗用一次性医用材料费", key: "yyclf" },
+      { label: "(23) 手术用一次性医用材料费", key: "ssycxclf" },
     ],
   },
   {
@@ -182,6 +182,13 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
     });
   };
 
+  const ybjjzf = (() => {
+    const zfy = Number(feeSummary?.zfy);
+    const zfje = Number(feeSummary?.zfje);
+    if (!Number.isFinite(zfy) || !Number.isFinite(zfje)) return null;
+    return zfy - zfje;
+  })();
+
   return (
     <Space direction="vertical" size="small" style={{ width: "100%" }}>
       {/* 费用概览 */}
@@ -221,7 +228,7 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
                   {showSource && sourceTip ? sourceTip("YBJJZF") : null}
                 </Space>
               ),
-              value: <Text strong style={{ fontSize: 18, color: "#FA8C16" }}>{formatFeeValue(feeSummary?.ybjjzf)}</Text>,
+              value: <Text strong style={{ fontSize: 18, color: "#FA8C16" }}>{formatFeeValue(ybjjzf)}</Text>,
             },
           ]}
           style={{

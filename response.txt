@@ -1,0 +1,154 @@
+{
+    "patient_no": "2025122410305",
+    "visit_time": "2025-12-24T10:38:15",
+    "record": null,
+    "fields": {
+        "USERNAME": {
+            "value": "益阳市第一中医医院",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZKH": {
+            "value": "2025122410305",
+            "source": "prefill",
+            "readonly": false
+        },
+        "XM": {
+            "value": "胡曼丽",
+            "source": "prefill",
+            "readonly": false
+        },
+        "XB": {
+            "value": "2",
+            "source": "prefill",
+            "readonly": false
+        },
+        "CSRQ": {
+            "value": "1982-05-10",
+            "source": "prefill",
+            "readonly": false
+        },
+        "HY": {
+            "value": "9",
+            "source": "prefill",
+            "readonly": false
+        },
+        "GJ": {
+            "value": "CHN",
+            "source": "prefill",
+            "readonly": false
+        },
+        "MZ": {
+            "value": 1,
+            "source": "prefill",
+            "readonly": false
+        },
+        "ZJLB": {
+            "value": "1",
+            "source": "prefill",
+            "readonly": false
+        },
+        "ZJHM": {
+            "value": "430981198205100528",
+            "source": "prefill",
+            "readonly": false
+        },
+        "XZZ": {
+            "value": "湖南省沅江市庆云山办事处蔬菜队四村民组180号",
+            "source": "prefill",
+            "readonly": false
+        },
+        "LXDH": {
+            "value": "18230542109",
+            "source": "prefill",
+            "readonly": false
+        },
+        "GHSJ": {
+            "value": "2025-12-24T10:38:15",
+            "source": "prefill",
+            "readonly": false
+        },
+        "BDSJ": {
+            "value": "2025-12-24T10:38:15",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZSJ": {
+            "value": "2025-12-24T10:38:15",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZKS": {
+            "value": "妇产科门诊",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZKSDM": {
+            "value": "50.03",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZYS": {
+            "value": "郭梦辉",
+            "source": "prefill",
+            "readonly": false
+        },
+        "JZYSZC": {
+            "value": 2,
+            "source": "prefill",
+            "readonly": false
+        },
+        "ZYZKJSJ": {
+            "value": null,
+            "source": "prefill",
+            "readonly": false
+        },
+        "ZFY": {
+            "value": "356.5400",
+            "source": "prefill",
+            "readonly": true
+        },
+        "ZFJE": {
+            "value": "356.54",
+            "source": "prefill",
+            "readonly": true
+        },
+        "YLFWF": {
+            "value": "20.0000",
+            "source": "prefill",
+            "readonly": true
+        },
+        "ZLCZF": {
+            "value": "0.0000",
+            "source": "prefill",
+            "readonly": true
+        },
+        "XYSY": {
+            "value": "2",
+            "source": "prefill",
+            "readonly": true
+        },
+        "ZCYSY": {
+            "value": "2",
+            "source": "prefill",
+            "readonly": true
+        },
+        "ZYZJSY": {
+            "value": "1",
+            "source": "prefill",
+            "readonly": true
+        },
+        "CTYPSY": {
+            "value": "2",
+            "source": "prefill",
+            "readonly": true
+        },
+        "PFKLSY": {
+            "value": "2",
+            "source": "prefill",
+            "readonly": true
+        }
+    },
+    "lists": {},
+    "hints": []
+}
