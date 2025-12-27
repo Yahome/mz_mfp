@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import require_session
 from app.core.db import get_db
 from app.schemas.dicts import DictSearchResponse
+from app.schemas.dict_user_prefs import DictFavoriteUpdateRequest, DictUserItemsResponse
 from app.services.dicts import DictService
 
 router = APIRouter(prefix="/dicts", tags=["dicts"])
@@ -25,4 +26,49 @@ def search_dict(
     service: DictService = Depends(get_dict_service),
 ) -> DictSearchResponse:
     return service.search(set_code=set_code, query=q, page=page, page_size=page_size)
+
+
+@router.get("/{set_code}/recents", response_model=DictUserItemsResponse)
+def list_recent(
+    set_code: str = Path(..., description="字典集编码"),
+    limit: int = Query(50, ge=1, le=500),
+    session=Depends(require_session),
+    service: DictService = Depends(get_dict_service),
+) -> DictUserItemsResponse:
+    items = service.list_recent(user_code=session.doc_code, set_code=set_code, limit=limit)
+    return DictUserItemsResponse(set_code=set_code, items=items)
+
+
+@router.post("/{set_code}/recents/{code}")
+def mark_recent(
+    set_code: str = Path(..., description="字典集编码"),
+    code: str = Path(..., description="字典项编码"),
+    session=Depends(require_session),
+    service: DictService = Depends(get_dict_service),
+) -> dict[str, str]:
+    service.mark_recent(user_code=session.doc_code, set_code=set_code, code=code)
+    return {"status": "ok"}
+
+
+@router.get("/{set_code}/favorites", response_model=DictUserItemsResponse)
+def list_favorites(
+    set_code: str = Path(..., description="字典集编码"),
+    limit: int = Query(200, ge=1, le=1000),
+    session=Depends(require_session),
+    service: DictService = Depends(get_dict_service),
+) -> DictUserItemsResponse:
+    items = service.list_favorites(user_code=session.doc_code, set_code=set_code, limit=limit)
+    return DictUserItemsResponse(set_code=set_code, items=items)
+
+
+@router.put("/{set_code}/favorites/{code}")
+def update_favorite(
+    payload: DictFavoriteUpdateRequest,
+    set_code: str = Path(..., description="字典集编码"),
+    code: str = Path(..., description="字典项编码"),
+    session=Depends(require_session),
+    service: DictService = Depends(get_dict_service),
+) -> dict[str, str]:
+    service.set_favorite(user_code=session.doc_code, set_code=set_code, code=code, favorited=payload.favorited)
+    return {"status": "ok"}
 

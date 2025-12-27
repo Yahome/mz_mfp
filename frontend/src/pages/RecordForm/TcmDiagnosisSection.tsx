@@ -1,4 +1,4 @@
-import DiagnosisGroupCard, { type DiagnosisRow } from "@/components/DiagnosisGroupCard";
+import DiagnosisGroupCard, { type DiagnosisDictTarget, type DiagnosisRow } from "@/components/DiagnosisGroupCard";
 
 type Props = {
   tcmDisease: DiagnosisRow[];
@@ -6,6 +6,8 @@ type Props = {
   tcmSyndrome: DiagnosisRow[];
   setTcmSyndrome: (next: DiagnosisRow[]) => void;
   errorMap: Record<string, string[]>;
+  activeTarget?: DiagnosisDictTarget | null;
+  onActivateTarget?: (target: DiagnosisDictTarget) => void;
 };
 
 export default function TcmDiagnosisSection({
@@ -14,6 +16,8 @@ export default function TcmDiagnosisSection({
   tcmSyndrome,
   setTcmSyndrome,
   errorMap,
+  activeTarget,
+  onActivateTarget,
 }: Props) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
@@ -27,6 +31,8 @@ export default function TcmDiagnosisSection({
         min={1}
         codeRequired
         errorMap={errorMap}
+        activeTarget={activeTarget}
+        onActivateTarget={onActivateTarget}
       />
       <DiagnosisGroupCard
         title="中医证候（必填 1 条，最多 2 条）"
@@ -38,6 +44,8 @@ export default function TcmDiagnosisSection({
         min={1}
         codeRequired
         errorMap={errorMap}
+        activeTarget={activeTarget}
+        onActivateTarget={onActivateTarget}
       />
     </div>
   );

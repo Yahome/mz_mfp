@@ -119,6 +119,19 @@ body {
   margin-bottom: 8px;
 }
 
+.dict-panel-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .dict-panel-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .compact-table {
   width: 100%;
 }

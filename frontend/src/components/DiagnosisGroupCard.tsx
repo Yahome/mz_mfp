@@ -1,9 +1,17 @@
 import { Button, Input, Space, Tag, Typography } from "antd";
-import DictRemoteSelect, { type DictItem } from "@/components/DictRemoteSelect";
 
 const { Text } = Typography;
 
 export type DiagnosisRow = { seq_no: number; diag_name: string; diag_code?: string };
+
+export type DiagnosisDictTarget = {
+  kind: "diagnosis";
+  diagType: "tcm_disease_main" | "tcm_syndrome" | "wm_main" | "wm_other";
+  dictSetCode: string;
+  title: string;
+  rowIndex: number;
+  rowSeqNo: number;
+};
 
 type Props = {
   title: string;
@@ -15,6 +23,8 @@ type Props = {
   min: number;
   codeRequired: boolean;
   errorMap: Record<string, string[]>;
+  activeTarget?: DiagnosisDictTarget | null;
+  onActivateTarget?: (target: DiagnosisDictTarget) => void;
 };
 
 function reindexSeq(rows: DiagnosisRow[]): DiagnosisRow[] {
@@ -31,6 +41,8 @@ export default function DiagnosisGroupCard({
   min,
   codeRequired,
   errorMap,
+  activeTarget,
+  onActivateTarget,
 }: Props) {
   const addRow = () => {
     if (rows.length >= max) return;
@@ -81,9 +93,10 @@ export default function DiagnosisGroupCard({
             const nameHasError = !!(errorMap[nameKey] || []).length;
             const codeHasError = !!(errorMap[codeKey] || []).length;
             const isMain = index === 0;
+            const isActive = activeTarget?.kind === "diagnosis" && activeTarget.diagType === diagType && activeTarget.rowSeqNo === row.seq_no;
 
             return (
-              <div key={row.seq_no} className="table-row">
+              <div key={row.seq_no} className={`table-row${isActive ? " is-active" : ""}`}>
                 <div className="cell category">
                   {isMain ? (
                     <span className="main-tag">主</span>
@@ -91,35 +104,43 @@ export default function DiagnosisGroupCard({
                     <span className="index-num">{row.seq_no}</span>
                   )}
                 </div>
-                <div className="cell code">
-                  <DictRemoteSelect
-                    setCode={dictSetCode}
-                    value={row.diag_code}
-                    allowClear
-                    placeholder={codeRequired ? "诊断编码（必填）" : "诊断编码（可选）"}
-                    onChange={(v) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], diag_code: v || "" };
-                      setRows(next);
-                    }}
-                    onSelectItem={(item: DictItem) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], diag_code: item.code, diag_name: item.name };
-                      setRows(next);
-                    }}
-                    style={{ width: "100%" }}
+                <div
+                  className="cell code clickable"
+                  onClick={() => {
+                    onActivateTarget?.({
+                      kind: "diagnosis",
+                      diagType,
+                      dictSetCode,
+                      title,
+                      rowIndex: index,
+                      rowSeqNo: row.seq_no,
+                    });
+                  }}
+                >
+                  <Input
+                    value={row.diag_code || ""}
+                    readOnly
+                    placeholder={codeRequired ? "点击右侧检索选择（必填）" : "点击右侧检索选择（可选）"}
                     status={codeHasError ? "error" : undefined}
                   />
                 </div>
-                <div className="cell name">
+                <div
+                  className="cell name clickable"
+                  onClick={() => {
+                    onActivateTarget?.({
+                      kind: "diagnosis",
+                      diagType,
+                      dictSetCode,
+                      title,
+                      rowIndex: index,
+                      rowSeqNo: row.seq_no,
+                    });
+                  }}
+                >
                   <Input
                     value={row.diag_name}
-                    onChange={(e) => {
-                      const next = [...rows];
-                      next[index] = { ...next[index], diag_name: e.target.value };
-                      setRows(next);
-                    }}
-                    placeholder="请输入或通过编码选择回填"
+                    readOnly
+                    placeholder="点击右侧检索选择"
                     status={nameHasError ? "error" : undefined}
                   />
                 </div>

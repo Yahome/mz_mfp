@@ -1,7 +1,10 @@
-import { Alert, Space } from "antd";
-import type { SurgeryRow } from "@/components/SurgeryCard";
+import { useMemo, useState } from "react";
+import { Alert, Space, message } from "antd";
+import DictSearchPanel from "@/components/DictSearchPanel";
+import type { DictItem } from "@/components/DictRemoteSelect";
+import type { SurgeryDictTarget, SurgeryRow } from "@/components/SurgeryCard";
 import SurgeryCard from "@/components/SurgeryCard";
-import type { TcmOpRow } from "@/components/TcmOperationCard";
+import type { TcmOpDictTarget, TcmOpRow } from "@/components/TcmOperationCard";
 import TcmOperationCard from "@/components/TcmOperationCard";
 
 type Props = {
@@ -13,24 +16,72 @@ type Props = {
 };
 
 export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurgeries, errorMap }: Props) {
+  const [activeTarget, setActiveTarget] = useState<SurgeryDictTarget | TcmOpDictTarget | null>(null);
+
+  const targetLabel = useMemo(() => {
+    if (!activeTarget) return null;
+    return `${activeTarget.title} 第${activeTarget.rowSeqNo}条`;
+  }, [activeTarget]);
+
+  const applyDictItem = (item: DictItem) => {
+    if (!activeTarget) return;
+
+    const updateRow = <T extends { seq_no: number; op_code: string; op_name: string }>(
+      rows: T[],
+      setRows: (next: T[]) => void,
+    ) => {
+      const next = [...rows];
+      const row = next[activeTarget.rowIndex];
+      if (!row || row.seq_no !== activeTarget.rowSeqNo) {
+        message.warning("目标行已变化，请重新点击左侧行后再回填");
+        return;
+      }
+      next[activeTarget.rowIndex] = { ...row, op_code: item.code, op_name: item.name };
+      setRows(next);
+    };
+
+    if (activeTarget.kind === "tcm_operation") updateRow(tcmOps, setTcmOps);
+    if (activeTarget.kind === "surgery") updateRow(surgeries, setSurgeries);
+  };
+
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
-      <Alert
-        type="warning"
-        showIcon
-        message="多值列表按 seq_no 保序"
-        description="删除/新增会自动重排 seq_no，禁止跳号空洞；条数超限将导致提交校验失败。"
+    <div className="dict-panel-layout">
+      <Space direction="vertical" size="small" style={{ width: "100%" }}>
+        <Alert
+          type="warning"
+          showIcon
+          message="多值列表按 seq_no 保序"
+          description="删除/新增会自动重排 seq_no，禁止跳号空洞；条数超限将导致提交校验失败。"
+        />
+        <div className="group-block">
+          <div className="compact-table">
+            <TcmOperationCard
+              rows={tcmOps}
+              setRows={setTcmOps}
+              errorMap={errorMap}
+              activeTarget={activeTarget?.kind === "tcm_operation" ? activeTarget : null}
+              onActivateTarget={(t) => setActiveTarget(t)}
+            />
+          </div>
+        </div>
+        <div className="group-block">
+          <div className="compact-table">
+            <SurgeryCard
+              rows={surgeries}
+              setRows={setSurgeries}
+              errorMap={errorMap}
+              activeTarget={activeTarget?.kind === "surgery" ? activeTarget : null}
+              onActivateTarget={(t) => setActiveTarget(t)}
+            />
+          </div>
+        </div>
+      </Space>
+
+      <DictSearchPanel
+        setCode={activeTarget?.setCode || null}
+        targetLabel={targetLabel}
+        onApplyItem={applyDictItem}
       />
-      <div className="group-block">
-        <div className="compact-table">
-          <TcmOperationCard rows={tcmOps} setRows={setTcmOps} errorMap={errorMap} />
-        </div>
-      </div>
-      <div className="group-block">
-        <div className="compact-table">
-          <SurgeryCard rows={surgeries} setRows={setSurgeries} errorMap={errorMap} />
-        </div>
-      </div>
-    </Space>
+    </div>
   );
 }

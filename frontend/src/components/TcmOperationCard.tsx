@@ -1,5 +1,4 @@
 import { Button, Input, InputNumber, Space, Tag, Typography } from "antd";
-import DictRemoteSelect from "@/components/DictRemoteSelect";
 
 const { Text } = Typography;
 
@@ -11,18 +10,35 @@ export type TcmOpRow = {
   op_days?: number;
 };
 
+export type TcmOpDictTarget = {
+  kind: "tcm_operation";
+  setCode: "ICD9CM3";
+  title: string;
+  rowIndex: number;
+  rowSeqNo: number;
+};
+
 type Props = {
   rows: TcmOpRow[];
   setRows: (next: TcmOpRow[]) => void;
   errorMap: Record<string, string[]>;
   max?: number;
+  activeTarget?: TcmOpDictTarget | null;
+  onActivateTarget?: (target: TcmOpDictTarget) => void;
 };
 
 function reindexSeq(rows: TcmOpRow[]): TcmOpRow[] {
   return rows.map((row, idx) => ({ ...row, seq_no: idx + 1 }));
 }
 
-export default function TcmOperationCard({ rows, setRows, errorMap, max = 10 }: Props) {
+export default function TcmOperationCard({
+  rows,
+  setRows,
+  errorMap,
+  max = 10,
+  activeTarget,
+  onActivateTarget,
+}: Props) {
   const groupErrorKey = "tcm_operation";
   const groupErrors = errorMap[groupErrorKey] || [];
 
@@ -77,44 +93,52 @@ export default function TcmOperationCard({ rows, setRows, errorMap, max = 10 }: 
             const codeMsgs = errorMap[codeKey] || [];
             const timesMsgs = errorMap[timesKey] || [];
             const daysMsgs = errorMap[daysKey] || [];
+            const isActive = activeTarget?.kind === "tcm_operation" && activeTarget.rowSeqNo === row.seq_no;
 
             return (
-              <div key={row.seq_no} className="table-row">
+              <div key={row.seq_no} className={`table-row${isActive ? " is-active" : ""}`}>
                 <div className="cell category">
                   <span className="index-num">{row.seq_no}</span>
                 </div>
-                <div className="cell code">
+                <div
+                  className="cell code clickable"
+                  onClick={() => {
+                    onActivateTarget?.({
+                      kind: "tcm_operation",
+                      setCode: "ICD9CM3",
+                      title: "中医治疗性操作",
+                      rowIndex: index,
+                      rowSeqNo: row.seq_no,
+                    });
+                  }}
+                >
                   <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
-                    <DictRemoteSelect
-                      setCode="ICD9CM3"
+                    <Input
                       value={row.op_code}
-                      allowClear
-                      placeholder="远程检索"
-                      onChange={(v) => {
-                        const next = [...rows];
-                        next[index] = { ...next[index], op_code: v || "" };
-                        setRows(next);
-                      }}
-                      onSelectItem={(item) => {
-                        const next = [...rows];
-                        next[index] = { ...next[index], op_code: item.code, op_name: item.name };
-                        setRows(next);
-                      }}
-                      style={{ width: "100%" }}
+                      readOnly
+                      placeholder="点击右侧检索选择"
                       status={codeMsgs.length ? "error" : undefined}
                     />
                     {!!codeMsgs.length && <Text type="danger">{codeMsgs.join("；")}</Text>}
                   </div>
                 </div>
-                <div className="cell name">
+                <div
+                  className="cell name clickable"
+                  onClick={() => {
+                    onActivateTarget?.({
+                      kind: "tcm_operation",
+                      setCode: "ICD9CM3",
+                      title: "中医治疗性操作",
+                      rowIndex: index,
+                      rowSeqNo: row.seq_no,
+                    });
+                  }}
+                >
                   <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
                     <Input
                       value={row.op_name}
-                      onChange={(e) => {
-                        const next = [...rows];
-                        next[index] = { ...next[index], op_name: e.target.value };
-                        setRows(next);
-                      }}
+                      readOnly
+                      placeholder="点击右侧检索选择"
                       status={nameMsgs.length ? "error" : undefined}
                     />
                     {!!nameMsgs.length && <Text type="danger">{nameMsgs.join("；")}</Text>}

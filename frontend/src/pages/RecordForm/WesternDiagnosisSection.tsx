@@ -1,4 +1,4 @@
-import DiagnosisGroupCard, { type DiagnosisRow } from "@/components/DiagnosisGroupCard";
+import DiagnosisGroupCard, { type DiagnosisDictTarget, type DiagnosisRow } from "@/components/DiagnosisGroupCard";
 
 type Props = {
   wmMain: DiagnosisRow[];
@@ -6,9 +6,19 @@ type Props = {
   wmOther: DiagnosisRow[];
   setWmOther: (next: DiagnosisRow[]) => void;
   errorMap: Record<string, string[]>;
+  activeTarget?: DiagnosisDictTarget | null;
+  onActivateTarget?: (target: DiagnosisDictTarget) => void;
 };
 
-export default function WesternDiagnosisSection({ wmMain, setWmMain, wmOther, setWmOther, errorMap }: Props) {
+export default function WesternDiagnosisSection({
+  wmMain,
+  setWmMain,
+  wmOther,
+  setWmOther,
+  errorMap,
+  activeTarget,
+  onActivateTarget,
+}: Props) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
       <DiagnosisGroupCard
@@ -21,6 +31,8 @@ export default function WesternDiagnosisSection({ wmMain, setWmMain, wmOther, se
         min={1}
         codeRequired={false}
         errorMap={errorMap}
+        activeTarget={activeTarget}
+        onActivateTarget={onActivateTarget}
       />
       <DiagnosisGroupCard
         title="西医其他诊断（最多 10 条）"
@@ -32,6 +44,8 @@ export default function WesternDiagnosisSection({ wmMain, setWmMain, wmOther, se
         min={0}
         codeRequired={false}
         errorMap={errorMap}
+        activeTarget={activeTarget}
+        onActivateTarget={onActivateTarget}
       />
     </div>
   );
