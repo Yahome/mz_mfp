@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, Optional
 
 from fastapi import status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.errors import AppError
@@ -18,6 +18,7 @@ from app.models.herb_detail import HerbDetail
 from app.models.medication_summary import MedicationSummary
 from app.models.org import Org
 from app.models.record import Record
+from app.models.export_log import ExportLog
 from app.models.surgery import Surgery
 from app.models.tcm_operation import TcmOperation
 from app.schemas.auth import SessionPayload
@@ -59,7 +60,7 @@ def _jsonable(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, Decimal):
         return str(value)
-    if isinstance(value, dict):
+    if isinstance(value, Mapping):
         return {str(k): _jsonable(v) for k, v in value.items()}
     if isinstance(value, list):
         return [_jsonable(v) for v in value]
@@ -250,6 +251,32 @@ class RecordService:
         )
         return self.db.execute(stmt).scalars().first()
 
+    def reset_patient(self, patient_no: str, session: SessionPayload) -> dict[str, Any]:
+        login = (session.login_name or "").lower()
+        roles = {str(r).lower() for r in (session.roles or [])}
+        if login != "admin" and "admin" not in roles:
+            raise AppError(code="forbidden", message="仅 admin 可执行清理", http_status=status.HTTP_403_FORBIDDEN)
+
+        patient_no = (patient_no or "").strip()
+        if not patient_no:
+            raise AppError(code="validation_failed", message="patient_no 不能为空", http_status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+
+        record = self._load_record(patient_no)
+        deleted_id: Optional[int] = None
+        if record:
+            deleted_id = record.id
+            # 先删导出日志，再删主记录（子表靠级联）
+            self.db.execute(delete(ExportLog).where(ExportLog.record_id == record.id))
+            self.db.delete(record)
+            self.db.flush()
+
+        self.db.commit()
+        return {
+            "status": "ok",
+            "patient_no": patient_no,
+            "deleted_record_id": deleted_id,
+        }
+
     def _check_version(self, record: Record, provided: Optional[int]) -> None:
         if provided is None:
             raise AppError(
@@ -333,6 +360,9 @@ class RecordService:
         self._replace_herbs(record, payload.herb_details)
 
     def _replace_diagnoses(self, record: Record, items: Iterable[DiagnosisItem]) -> None:
+        # 清理旧数据先落库，避免唯一约束(record_id, diag_type, seq_no)与新增冲突
+        self.db.execute(delete(Diagnosis).where(Diagnosis.record_id == record.id))
+        self.db.flush()
         record.diagnoses.clear()
         grouped: dict[str, list[dict[str, Any]]] = {}
         for item in items:
@@ -353,6 +383,8 @@ class RecordService:
                 )
 
     def _replace_tcm_ops(self, record: Record, items: Iterable[TcmOperationItem]) -> None:
+        self.db.execute(delete(TcmOperation).where(TcmOperation.record_id == record.id))
+        self.db.flush()
         record.tcm_operations.clear()
         normalized = _normalize_seq([item.model_dump() for item in items], key="seq_no")
         for item in normalized:
@@ -369,6 +401,8 @@ class RecordService:
             )
 
     def _replace_surgeries(self, record: Record, items: Iterable[SurgeryItem]) -> None:
+        self.db.execute(delete(Surgery).where(Surgery.record_id == record.id))
+        self.db.flush()
         record.surgeries.clear()
         normalized = _normalize_seq([item.model_dump() for item in items], key="seq_no")
         for item in normalized:
@@ -388,6 +422,8 @@ class RecordService:
             )
 
     def _replace_herbs(self, record: Record, items: Iterable[HerbDetailItem]) -> None:
+        self.db.execute(delete(HerbDetail).where(HerbDetail.record_id == record.id))
+        self.db.flush()
         record.herb_details.clear()
         normalized = _normalize_seq([item.model_dump() for item in items], key="seq_no")
         for item in normalized:

@@ -4,6 +4,8 @@ import AppEntry from "./pages/AppEntry";
 import FrontendConfig from "./pages/FrontendConfig";
 import Login from "./pages/Login";
 import PrefillTest from "./pages/PrefillTest";
+import AdminResetPatient from "./pages/AdminResetPatient";
+import ExportReport from "./pages/ExportReport";
 
 export default function App() {
   return (
@@ -29,6 +31,22 @@ export default function App() {
         element={
           <AppLayout showFormNav={false}>
             <FrontendConfig />
+          </AppLayout>
+        }
+      />
+      <Route
+        path="/admin/reset"
+        element={
+          <AppLayout showFormNav={false}>
+            <AdminResetPatient />
+          </AppLayout>
+        }
+      />
+      <Route
+        path="/export"
+        element={
+          <AppLayout showFormNav={false}>
+            <ExportReport />
           </AppLayout>
         }
       />

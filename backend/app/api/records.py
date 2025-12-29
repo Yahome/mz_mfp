@@ -107,3 +107,12 @@ def record_qc(
     service: QcService = Depends(get_qc_service),
 ) -> RecordQcResponse:
     return service.get_record_qc(record_id=record_id, session=session)
+
+
+@router.post("/records/{patient_no}/reset")
+def reset_record(
+    patient_no: str = Path(..., description="患者唯一号（blh）"),
+    session: SessionPayload = Depends(require_session),
+    service: RecordService = Depends(get_record_service),
+) -> dict[str, object]:
+    return service.reset_patient(patient_no=patient_no, session=session)

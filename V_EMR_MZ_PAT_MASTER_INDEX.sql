@@ -54,7 +54,9 @@ SELECT
     f.name AS JZYS,
     g.YS_TYPEID AS jzyszc,
     f.EMPLOYEE_ID AS jzysdm,
-    h.djsj AS zyzdjsj
+    h.djsj AS zyzdjsj,
+    
+    zs.content as hzzs
 
 FROM vi_MZYS_JZJL a
 LEFT JOIN VI_MZ_GHXX b ON a.ghxxid = b.ghxxid
@@ -75,5 +77,7 @@ LEFT JOIN (
     WHERE bscbz = '0' 
     GROUP BY brxxid, MZH
 ) h ON h.brxxid = b.BRXXID AND h.mzh = b.BLH
+LEFT JOIN  (select  * from openquery([10.10.8.50], 'select * from JHEMR.MZ_EMR_NODE where node = ''主诉'' AND last_modify_date_time >= 
+TO_DATE(''2025-12-01 00:00:00'', ''YYYY-MM-DD HH24:MI:SS'')')) zs on zs.patient_id = b.blh 
 
 WHERE a.jssj >= '2025-12-01'

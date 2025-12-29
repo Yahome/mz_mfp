@@ -92,17 +92,13 @@ export default function DiagnosisGroupCard({
             const codeKey = `diagnosis.${diagType}.${row.seq_no}.diag_code`;
             const nameHasError = !!(errorMap[nameKey] || []).length;
             const codeHasError = !!(errorMap[codeKey] || []).length;
-            const isMain = index === 0;
+            const isMain = (diagType === "tcm_disease_main" || diagType === "wm_main") && index === 0;
             const isActive = activeTarget?.kind === "diagnosis" && activeTarget.diagType === diagType && activeTarget.rowSeqNo === row.seq_no;
 
             return (
               <div key={row.seq_no} className={`table-row${isActive ? " is-active" : ""}`}>
                 <div className="cell category">
-                  {isMain ? (
-                    <span className="main-tag">主</span>
-                  ) : (
-                    <span className="index-num">{row.seq_no}</span>
-                  )}
+                  {isMain ? <span className="main-tag">主</span> : <span className="index-num">{row.seq_no}</span>}
                 </div>
                 <div
                   className="cell code clickable"

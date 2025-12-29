@@ -31,6 +31,7 @@ export default function DiagnosisSection({
   errorMap,
 }: Props) {
   const [activeTarget, setActiveTarget] = useState<DiagnosisDictTarget | null>(null);
+  const [focusTrigger, setFocusTrigger] = useState(0);
 
   const targetLabel = useMemo(() => {
     if (!activeTarget) return null;
@@ -70,7 +71,10 @@ export default function DiagnosisSection({
               setTcmSyndrome={setTcmSyndrome}
               errorMap={errorMap}
               activeTarget={activeTarget}
-              onActivateTarget={setActiveTarget}
+              onActivateTarget={(t) => {
+                setActiveTarget(t);
+                setFocusTrigger((x) => x + 1);
+              }}
             />
           </div>
         </BoardingPassCard>
@@ -85,7 +89,10 @@ export default function DiagnosisSection({
               setWmOther={setWmOther}
               errorMap={errorMap}
               activeTarget={activeTarget}
-              onActivateTarget={setActiveTarget}
+              onActivateTarget={(t) => {
+                setActiveTarget(t);
+                setFocusTrigger((x) => x + 1);
+              }}
             />
           </div>
         </BoardingPassCard>
@@ -95,6 +102,7 @@ export default function DiagnosisSection({
         setCode={activeTarget?.dictSetCode || null}
         targetLabel={targetLabel}
         onApplyItem={applyDictItem}
+        focusTrigger={focusTrigger}
       />
     </div>
   );

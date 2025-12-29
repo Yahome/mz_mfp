@@ -17,6 +17,7 @@ type Props = {
 
 export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurgeries, errorMap }: Props) {
   const [activeTarget, setActiveTarget] = useState<SurgeryDictTarget | TcmOpDictTarget | null>(null);
+  const [focusTrigger, setFocusTrigger] = useState(0);
 
   const targetLabel = useMemo(() => {
     if (!activeTarget) return null;
@@ -47,12 +48,6 @@ export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurger
   return (
     <div className="dict-panel-layout">
       <Space direction="vertical" size="small" style={{ width: "100%" }}>
-        <Alert
-          type="warning"
-          showIcon
-          message="多值列表按 seq_no 保序"
-          description="删除/新增会自动重排 seq_no，禁止跳号空洞；条数超限将导致提交校验失败。"
-        />
         <div className="group-block">
           <div className="compact-table">
             <TcmOperationCard
@@ -60,7 +55,10 @@ export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurger
               setRows={setTcmOps}
               errorMap={errorMap}
               activeTarget={activeTarget?.kind === "tcm_operation" ? activeTarget : null}
-              onActivateTarget={(t) => setActiveTarget(t)}
+              onActivateTarget={(t) => {
+                setActiveTarget(t);
+                setFocusTrigger((x) => x + 1);
+              }}
             />
           </div>
         </div>
@@ -71,7 +69,10 @@ export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurger
               setRows={setSurgeries}
               errorMap={errorMap}
               activeTarget={activeTarget?.kind === "surgery" ? activeTarget : null}
-              onActivateTarget={(t) => setActiveTarget(t)}
+              onActivateTarget={(t) => {
+                setActiveTarget(t);
+                setFocusTrigger((x) => x + 1);
+              }}
             />
           </div>
         </div>
@@ -81,6 +82,7 @@ export default function SurgerySection({ tcmOps, setTcmOps, surgeries, setSurger
         setCode={activeTarget?.setCode || null}
         targetLabel={targetLabel}
         onApplyItem={applyDictItem}
+        focusTrigger={focusTrigger}
       />
     </div>
   );

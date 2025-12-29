@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Card, Input, Pagination, Space, Tabs, Typography, message } from "antd";
+import type { InputRef } from "antd";
 import { SearchOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
 import apiClient from "@/services/apiClient";
 import type { DictItem } from "@/components/DictRemoteSelect";
@@ -26,6 +27,7 @@ type Props = {
   setCode?: string | null;
   targetLabel?: string | null;
   onApplyItem: (item: DictItem) => void;
+  focusTrigger?: number;
 };
 
 const SEARCH_PAGE_SIZE = 20;
@@ -36,7 +38,7 @@ function normalizeCode(value: string | null | undefined): string {
   return (value || "").trim();
 }
 
-export default function DictSearchPanel({ setCode, targetLabel, onApplyItem }: Props) {
+export default function DictSearchPanel({ setCode, targetLabel, onApplyItem, focusTrigger = 0 }: Props) {
   const normalizedSetCode = normalizeCode(setCode);
   const hasTarget = Boolean(normalizedSetCode) && Boolean(targetLabel);
 
@@ -56,6 +58,7 @@ export default function DictSearchPanel({ setCode, targetLabel, onApplyItem }: P
   const [favorites, setFavorites] = useState<DictItem[]>([]);
 
   const favoriteCodeSet = useMemo(() => new Set(favorites.map((it) => normalizeCode(it.code))), [favorites]);
+  const searchInputRef = useRef<InputRef | null>(null);
 
   const loadRecents = async () => {
     if (!normalizedSetCode) return;
@@ -137,6 +140,13 @@ export default function DictSearchPanel({ setCode, targetLabel, onApplyItem }: P
       if (debounceRef.current) window.clearTimeout(debounceRef.current);
     };
   }, [normalizedSetCode, tab, query]);
+
+  useEffect(() => {
+    if (!hasTarget) return;
+    searchInputRef.current?.focus({
+      cursor: "end",
+    });
+  }, [focusTrigger, hasTarget]);
 
   const markRecent = async (code: string) => {
     if (!normalizedSetCode) return;
@@ -228,6 +238,7 @@ export default function DictSearchPanel({ setCode, targetLabel, onApplyItem }: P
       children: (
         <Space direction="vertical" size="small" style={{ width: "100%" }}>
           <Input
+            ref={searchInputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             allowClear
@@ -312,4 +323,3 @@ export default function DictSearchPanel({ setCode, targetLabel, onApplyItem }: P
     </Card>
   );
 }
-

@@ -189,13 +189,17 @@ class ExportService:
             raise AppError(code="forbidden", message="无权执行批量导出", http_status=status.HTTP_403_FORBIDDEN)
 
     def _fetch_patient_nos(self, *, from_dt: datetime, to_dt: datetime) -> list[str]:
-        rows = self.external.fetch_visit_list(from_dt=from_dt, to_dt=to_dt)
-        patient_nos: list[str] = []
-        for raw in rows:
-            pn = _get_patient_no(raw)
-            if pn:
-                patient_nos.append(pn)
-        return _unique_preserve_order(patient_nos)
+        stmt = (
+            select(Record.patient_no)
+            .where(
+                Record.visit_time >= from_dt,
+                Record.visit_time < to_dt,
+                Record.status == "submitted",
+            )
+            .order_by(Record.visit_time.asc(), Record.patient_no.asc())
+        )
+        patient_nos = [row[0] for row in self.db.execute(stmt).all()]
+        return _unique_preserve_order([pn for pn in patient_nos if pn])
 
     def _load_records(self, patient_nos: list[str]) -> list[Record]:
         if not patient_nos:

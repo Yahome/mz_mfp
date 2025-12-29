@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import status
 from sqlalchemy import create_engine, text
@@ -31,6 +31,14 @@ class ExternalDataAdapter:
               JZKH, JZSJ, jzksdm, jzysdm, XM, jzks, JZYS
             FROM V_EMR_MZ_PAT_MASTER_INDEX
             WHERE JZSJ >= :from_dt AND JZSJ < :to_dt
+            """
+        )
+        self.diagnosis_query = text(
+            """
+            SELECT *
+            FROM V_EMR_MZ_PAGE_DISEASE
+            WHERE inp_no = :patient_no
+            ORDER BY diagnosis_no ASC
             """
         )
 
@@ -73,3 +81,6 @@ class ExternalDataAdapter:
 
     def fetch_visit_list(self, *, from_dt, to_dt) -> List[Dict[str, Any]]:
         return self._run_query(self.visit_list_query, {"from_dt": from_dt, "to_dt": to_dt})
+
+    def fetch_diagnoses(self, patient_no: str) -> List[Dict[str, Any]]:
+        return self._run_query(self.diagnosis_query, {"patient_no": patient_no})

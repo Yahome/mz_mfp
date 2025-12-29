@@ -19,6 +19,14 @@ export type PrefillResponse = {
   patient_no: string;
   visit_time?: string | null;
   fields: Record<string, FieldValue>;
+  lists?: {
+    diagnoses?: {
+      tcm_disease_main?: DiagnosisRow[];
+      tcm_syndrome?: DiagnosisRow[];
+      wm_main?: DiagnosisRow[];
+      wm_other?: DiagnosisRow[];
+    };
+  };
 };
 
 export type FieldError = {
@@ -428,6 +436,7 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
         jzys: asString(prefillResp.data.fields?.JZYS?.value),
         jzyszc: asString(prefillResp.data.fields?.JZYSZC?.value),
         zyzkjsj: toDateTimeLocalValue(prefillResp.data.fields?.ZYZKJSJ?.value),
+        hzzs: asString(prefillResp.data.fields?.HZZS?.value),
       };
 
       const baseInfo = recordResp
@@ -440,6 +449,7 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
             zyzkjsj:
               toDateTimeLocalValue(recordResp.payload.base_info.zyzkjsj) ||
               toDateTimeLocalValue(prefillResp.data.fields?.ZYZKJSJ?.value),
+            hzzs: asString(recordResp.payload.base_info.hzzs) || asString(prefillResp.data.fields?.HZZS?.value),
           }
         : {
             ...baseFromPrefill,
@@ -448,9 +458,12 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
             fz: "",
             sy: "",
             mzmtbhz: "",
+            hzzs: asString(prefillResp.data.fields?.HZZS?.value),
           };
 
       form.setFieldsValue({ base_info: baseInfo } as BaseInfoFormValues);
+
+      const prefillDiagnoses = prefillResp?.data?.lists?.diagnoses;
 
       if (recordResp) {
         const byType: Record<string, DiagnosisRow[]> = {};
@@ -503,10 +516,15 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
           ),
         );
       } else {
-        setTcmDisease([{ seq_no: 1, diag_name: "", diag_code: "" }]);
-        setTcmSyndrome([{ seq_no: 1, diag_name: "", diag_code: "" }]);
-        setWmMain([{ seq_no: 1, diag_name: "", diag_code: "" }]);
-        setWmOther([]);
+        const tcmDiseasePrefill = prefillDiagnoses?.tcm_disease_main || [];
+        const tcmSyndromePrefill = prefillDiagnoses?.tcm_syndrome || [];
+        const wmMainPrefill = prefillDiagnoses?.wm_main || [];
+        const wmOtherPrefill = prefillDiagnoses?.wm_other || [];
+
+        setTcmDisease(reindexSeq(tcmDiseasePrefill.length ? tcmDiseasePrefill : [{ seq_no: 1, diag_name: "", diag_code: "" }]));
+        setTcmSyndrome(reindexSeq(tcmSyndromePrefill.length ? tcmSyndromePrefill : [{ seq_no: 1, diag_name: "", diag_code: "" }]));
+        setWmMain(reindexSeq(wmMainPrefill.length ? wmMainPrefill : [{ seq_no: 1, diag_name: "", diag_code: "" }]));
+        setWmOther(reindexSeq(wmOtherPrefill));
         setTcmOps([]);
         setSurgeries([]);
         setHerbRows([]);

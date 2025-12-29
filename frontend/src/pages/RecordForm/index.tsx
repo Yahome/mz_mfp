@@ -240,13 +240,43 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
     onValidationErrorsChange(errors);
   }, [validationErrors, onValidationErrorsChange]);
 
+  const contentBlurStyle = loading ? { filter: "blur(2px)", pointerEvents: "none", userSelect: "none" } : {};
+
   return (
-    <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-      <BoardingPassHeader
-        patientNo={patientNo}
-        name={xm}
-        gender={gender}
-        age={age}
+    <div style={{ position: "relative" }}>
+      {loading && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            zIndex: 20,
+            background: "rgba(255,255,255,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <Space direction="vertical" align="center">
+            <span className="ant-spin ant-spin-spinning">
+              <span className="ant-spin-dot ant-spin-dot-spin">
+                <i className="ant-spin-dot-item" />
+                <i className="ant-spin-dot-item" />
+                <i className="ant-spin-dot-item" />
+                <i className="ant-spin-dot-item" />
+              </span>
+            </span>
+            <Text type="secondary">患者数据加载中，请稍候…</Text>
+          </Space>
+        </div>
+      )}
+
+      <Space direction="vertical" size="middle" style={{ width: "100%", ...contentBlurStyle }}>
+        <BoardingPassHeader
+          patientNo={patientNo}
+          name={xm}
+          gender={gender}
+          age={age}
         visitTime={visitTimeText}
         phone={lxdh}
         department={jzks}
@@ -364,5 +394,6 @@ export default function RecordForm({ patientNo, onStatsChange, onValidationError
         </Form.Provider>
       </Space>
     </Space>
+    </div>
   );
 }

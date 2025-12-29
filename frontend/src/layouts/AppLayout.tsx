@@ -196,9 +196,17 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
           <Link to="/prefill-test" style={{ color: "#fff", opacity: 0.85 }}>
             预填测试页
           </Link>
+          <Link to="/export" style={{ color: "#fff", opacity: 0.85 }}>
+            导出
+          </Link>
           {isAdmin && (
             <Link to="/admin/config" style={{ color: "#fff", opacity: 0.85 }}>
               配置管理
+            </Link>
+          )}
+          {isAdmin && (
+            <Link to="/admin/reset" style={{ color: "#fff", opacity: 0.85 }}>
+              患者清理
             </Link>
           )}
         </Space>

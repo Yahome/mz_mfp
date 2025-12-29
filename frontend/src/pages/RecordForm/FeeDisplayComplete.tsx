@@ -190,16 +190,14 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
   })();
 
   return (
-    <Space direction="vertical" size="small" style={{ width: "100%" }}>
-      {/* 费用概览 */}
-      <Card
-        title={
-          <Text strong>费用概览</Text>
-        }
-        bordered
-        size="small"
-        bodyStyle={{ padding: 12 }}
-        style={{ borderRadius: "8px" }}
+    <Space direction="vertical" size={4} style={{ width: "100%" }}>
+      {/* 费用概览（无外框，仅保留数据） */}
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "8px",
+          padding: "8px 12px",
+        }}
       >
         <BoardingPassInfoGrid
           items={[
@@ -237,7 +235,7 @@ export default function FeeDisplayComplete({ feeSummary, showSource, sourceTip }
             padding: "10px 12px",
           }}
         />
-      </Card>
+      </div>
 
       {/* 费用分类明细 */}
       {FEE_CATEGORIES.map((category, categoryIndex) => {

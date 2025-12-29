@@ -53,6 +53,18 @@ class PrefillService:
                 http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             ) from exc
 
+        diagnoses = []
+        try:
+            diagnoses = self.adapter.fetch_diagnoses(patient_no)
+        except AppError:
+            raise
+        except Exception as exc:
+            raise AppError(
+                code="external_error",
+                message="外部数据暂不可用，请稍后重试",
+                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ) from exc
+
         fields = self._build_fields(base_map, dict(fee_info) if fee_info else None)
         visit_time = first_value(base_map, ["JZSJ", "jzsj"])
 
@@ -61,7 +73,7 @@ class PrefillService:
             visit_time=visit_time,
             record=None,
             fields=fields,
-            lists={},
+            lists={"diagnoses": self._build_diagnosis_lists(diagnoses)},
             hints=[],
         )
 
@@ -87,6 +99,7 @@ class PrefillService:
             "JZKSDM",
             "JZYS",
             "JZYSZC",
+            "HZZS",
         ]
         for name in base_fields:
             value = first_value(base_map, [name, name.lower()])
@@ -157,3 +170,50 @@ class PrefillService:
                 fields[out_key] = FieldValue(value=clean_value(value), source="prefill", readonly=True)
 
         return fields
+
+    def _build_diagnosis_lists(self, rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+        # HIS 标识：sort D=西医，B=中医主病，Z=中医证候
+        # 诊断序号：西医诊断 diagnosis_no=1 为主诊断，其余为其他
+        if not rows:
+            return {}
+
+        def _get(row: dict[str, Any], keys: list[str]) -> str:
+            return clean_value(first_value(row, keys)) or ""
+
+        parsed = []
+        for row in rows:
+            parsed.append(
+                {
+                    "sort": _get(row, ["DIAGNOSIS_HIS_SORT", "sort"]),
+                    "diagnosis_no": first_value(row, ["diagnosis_no", "DIAGNOSIS_NO"]),
+                    "name": _get(row, ["diagnosis_name", "DIAGNOSIS_NAME", "diagnosis_desc"]),
+                    "code": _get(row, ["diagnosis_code", "DIAGNOSIS_CODE"]),
+                }
+            )
+
+        wm_all = [r for r in parsed if r["sort"] == "D" and r["name"]]
+        wm_main = [r for r in wm_all if str(r.get("diagnosis_no")) == "1"]
+        wm_other = [r for r in wm_all if str(r.get("diagnosis_no")) != "1"]
+
+        tcm_disease_all = [r for r in parsed if r["sort"] == "B" and r["name"]]
+        tcm_disease = sorted(tcm_disease_all, key=lambda r: int(r.get("diagnosis_no") or 1))[:1]
+
+        tcm_syn_all = [r for r in parsed if r["sort"] == "Z" and r["name"]]
+        tcm_syn = sorted(tcm_syn_all, key=lambda r: int(r.get("diagnosis_no") or 1))[:2]
+
+        def _to_row(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+            return [
+                {
+                    "seq_no": idx + 1,
+                    "diag_name": r["name"],
+                    "diag_code": r["code"],
+                }
+                for idx, r in enumerate(rows)
+            ]
+
+        return {
+            "tcm_disease_main": _to_row(tcm_disease),
+            "tcm_syndrome": _to_row(tcm_syn),
+            "wm_main": _to_row(wm_main[:1]),
+            "wm_other": _to_row(wm_other),
+        }
