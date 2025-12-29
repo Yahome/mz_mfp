@@ -21,6 +21,7 @@ class VisitIndex(TimestampMixin, Base):
     patient_no: Mapped[str] = mapped_column(String(50), primary_key=True)
     visit_time: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     dept_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    dept_his_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     doc_code: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     xm: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     jzks: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)

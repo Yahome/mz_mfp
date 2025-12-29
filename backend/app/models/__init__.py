@@ -9,6 +9,7 @@ from app.models.field_audit import FieldAudit
 from app.models.herb_detail import HerbDetail
 from app.models.medication_summary import MedicationSummary
 from app.models.org import Org
+from app.models.dept import AppDept
 from app.models.record import Record
 from app.models.surgery import Surgery
 from app.models.tcm_operation import TcmOperation
@@ -32,6 +33,7 @@ __all__ = [
     "HerbDetail",
     "MedicationSummary",
     "Org",
+    "AppDept",
     "Record",
     "Surgery",
     "TcmOperation",

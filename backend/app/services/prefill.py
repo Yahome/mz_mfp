@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, Optional
 
 from fastapi import status
@@ -17,6 +18,7 @@ class PrefillService:
         self.adapter = adapter
 
     def prefill(self, patient_no: str, session: SessionPayload) -> PrefillResponse:
+        # 先拿基础信息做访问校验，后续耗时查询并行
         try:
             base_info = self.adapter.fetch_base_info(patient_no)
         except AppError:
@@ -37,35 +39,44 @@ class PrefillService:
 
         base_map = dict(base_info)
         visit_context = VisitAccessContext(
-            dept_code=first_value(base_map, ["JZKSDM", "jzksdm", "JZKSDMHIS", "jzksdmhis", "DEPT_CODE", "dept_code"]),
+            dept_code=first_value(base_map, ["JZKSDMHIS", "jzksdmhis", "JZKSDM", "jzksdm", "DEPT_CODE", "dept_code"]),
             doc_code=first_value(base_map, ["JZYS_DM", "JZYSBM", "JZYSBM_CODE", "jzysdm", "DOC_CODE"]),
         )
         validate_patient_access(patient_no, session, visit_context)
 
-        try:
-            fee_info = self.adapter.fetch_patient_fee(patient_no)
-        except AppError:
-            raise
-        except Exception as exc:
-            raise AppError(
-                code="external_error",
-                message="外部数据暂不可用，请稍后重试",
-                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            ) from exc
+        fee_info = None
+        diagnoses: list[dict[str, Any]] = []
+        chief_complaint = None
+        herb_rows: list[dict[str, Any]] = []
 
-        diagnoses = []
-        try:
-            diagnoses = self.adapter.fetch_diagnoses(patient_no)
-        except AppError:
-            raise
-        except Exception as exc:
-            raise AppError(
-                code="external_error",
-                message="外部数据暂不可用，请稍后重试",
-                http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            ) from exc
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                "fee": executor.submit(self.adapter.fetch_patient_fee, patient_no),
+                "diag": executor.submit(self.adapter.fetch_diagnoses, patient_no),
+                "chief": executor.submit(self.adapter.fetch_chief_complaint_sqlserver, patient_no),
+                "herb": executor.submit(self.adapter.fetch_herb_details, patient_no),
+            }
+            for name, future in futures.items():
+                try:
+                    result = future.result()
+                    if name == "fee":
+                        fee_info = result
+                    elif name == "diag":
+                        diagnoses = result or []
+                    elif name == "chief":
+                        chief_complaint = result
+                    elif name == "herb":
+                        herb_rows = result or []
+                except AppError:
+                    raise
+                except Exception as exc:
+                    raise AppError(
+                        code="external_error",
+                        message="外部数据暂不可用，请稍后重试",
+                        http_status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    ) from exc
 
-        fields = self._build_fields(base_map, dict(fee_info) if fee_info else None)
+        fields = self._build_fields(base_map, dict(fee_info) if fee_info else None, chief_complaint)
         visit_time = first_value(base_map, ["JZSJ", "jzsj"])
 
         return PrefillResponse(
@@ -73,11 +84,14 @@ class PrefillService:
             visit_time=visit_time,
             record=None,
             fields=fields,
-            lists={"diagnoses": self._build_diagnosis_lists(diagnoses)},
+            lists={
+                "diagnoses": self._build_diagnosis_lists(diagnoses),
+                "herbs": self._build_herb_list(herb_rows),
+            },
             hints=[],
         )
 
-    def _build_fields(self, base_map: Dict[str, Any], fee_map: Optional[Dict[str, Any]]) -> Dict[str, FieldValue]:
+    def _build_fields(self, base_map: Dict[str, Any], fee_map: Optional[Dict[str, Any]], chief_complaint: Optional[str]) -> Dict[str, FieldValue]:
         fields: Dict[str, FieldValue] = {}
         base_fields = [
             "USERNAME",
@@ -108,6 +122,10 @@ class PrefillService:
         zyzkjsj_raw = first_value(base_map, ["ZYZKJSJ", "zyzkjsj", "ZYZDJSJ", "zyzdjsj"])
         zyzkjsj_value = clean_value(zyzkjsj_raw)
         fields["ZYZKJSJ"] = FieldValue(value=zyzkjsj_value, source="prefill", readonly=zyzkjsj_value is not None)
+
+        # 主诉：优先 OPENQUERY 获取的内容，再回退基础视图字段
+        chief_value = clean_value(chief_complaint) or clean_value(first_value(base_map, ["HZZS", "hzzs"]))
+        fields["HZZS"] = FieldValue(value=chief_value, source="prefill", readonly=False)
 
         if fee_map:
             fee_mapping = {
@@ -217,3 +235,20 @@ class PrefillService:
             "wm_main": _to_row(wm_main[:1]),
             "wm_other": _to_row(wm_other),
         }
+
+    def _build_herb_list(self, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        if not rows:
+            return []
+        sorted_rows = sorted(rows, key=lambda r: int(first_value(r, ["xh"]) or 0))
+        result = []
+        for idx, r in enumerate(sorted_rows[:40], start=1):
+            result.append(
+                {
+                    "seq_no": idx,
+                    "herb_type": clean_value(first_value(r, ["ZCYLB", "zcylb"])) or "",
+                    "route_code": clean_value(first_value(r, ["YYTJDM", "yytjdm"])) or "",
+                    "route_name": clean_value(first_value(r, ["YYTJMC", "yytjmc"])) or "",
+                    "dose_count": int(first_value(r, ["YYJS", "yyjs"]) or 0),
+                }
+            )
+        return result

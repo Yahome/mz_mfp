@@ -47,24 +47,85 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
 
   const [session, setSession] = useState<{
     login_name: string;
+    his_id?: string;
+    display_name?: string | null;
     dept_code: string;
+    dept_his_code?: string | null;
+    dept_name?: string | null;
     roles: string[];
     expires_at: string;
   } | null>(null);
   const [frontendConfig, setFrontendConfig] = useState<Record<string, any>>({});
   const [zoomPercent, setZoomPercent] = useState(100);
+  const [deptModalOpen, setDeptModalOpen] = useState(false);
+  const [deptOptions, setDeptOptions] = useState<Array<{ value: string; label: string; name?: string | null }>>([]);
+  const [deptSwitching, setDeptSwitching] = useState(false);
+  const [selectedDept, setSelectedDept] = useState<string>("");
   const warnedForExpiresAtRef = useRef<string | null>(null);
 
   const isAdmin = useMemo(() => (session?.roles || []).includes("admin"), [session]);
+  const isQc = useMemo(() => (session?.roles || []).includes("qc"), [session]);
+  const isDoctorOnly = useMemo(() => {
+    const roles = session?.roles || [];
+    const roleSet = new Set(roles);
+    return roleSet.size === 1 && roleSet.has("doctor");
+  }, [session]);
+  const canSwitchDept = isDoctorOnly;
 
   const loadSession = async () => {
     const resp = await apiClient.get("/auth/me", { withCredentials: true });
     setSession(resp.data);
+    const roles = resp.data?.roles || [];
+    const isDoctor = roles.length === 1 && roles.includes("doctor");
+    if (isDoctor) {
+      setSelectedDept(resp.data.dept_his_code || resp.data.dept_code);
+    }
   };
 
   const loadFrontendConfig = async () => {
     const resp = await apiClient.get("/config/frontend", { withCredentials: true });
     setFrontendConfig(resp.data?.config || {});
+  };
+
+  const loadDeptOptions = async () => {
+    const resp = await apiClient.get<{ current_dept_code: string; depts: { dept_code: string }[] }>("/auth/depts", {
+      withCredentials: true,
+    });
+    const opts = (resp.data.depts || []).map((item: any) => {
+      const code = item.dept_code;
+      const name = item.dept_name || "";
+      return { value: code, label: name ? `${name}（${code}）` : code, name };
+    });
+    setDeptOptions(opts);
+    if (!selectedDept && resp.data.current_dept_code) {
+      setSelectedDept(resp.data.current_dept_code);
+    }
+  };
+
+  const handleSwitchDept = async () => {
+    if (!selectedDept) {
+      message.warning("请选择科室");
+      return;
+    }
+    setDeptSwitching(true);
+    try {
+      await apiClient.post(
+        "/auth/switch-dept",
+        { dept_code: selectedDept },
+        { withCredentials: true },
+      );
+      message.success("科室已切换");
+      const me = await apiClient.get("/auth/me", { withCredentials: true });
+      setSession(me.data);
+      setDeptModalOpen(false);
+      navigate("/app", { replace: true });
+      window.location.reload();
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "切换失败";
+      message.error(msg);
+    } finally {
+      setDeptSwitching(false);
+    }
   };
 
   const renewSession = async (opts?: { silent?: boolean }) => {
@@ -75,10 +136,22 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await apiClient.post("/auth/logout", {}, { withCredentials: true });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "退出失败";
+      message.error(msg);
+    } finally {
+      navigate("/login", { replace: true });
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
         await loadSession();
+        await loadDeptOptions();
         await loadFrontendConfig();
       } catch (err: any) {
         const httpStatus = err?.response?.status;
@@ -193,12 +266,11 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
           <Link to="/app" style={{ color: "#fff", opacity: 0.85 }}>
             就诊列表
           </Link>
-          <Link to="/prefill-test" style={{ color: "#fff", opacity: 0.85 }}>
-            预填测试页
-          </Link>
-          <Link to="/export" style={{ color: "#fff", opacity: 0.85 }}>
-            导出
-          </Link>
+          {(isAdmin || isQc) && (
+            <Link to="/export" style={{ color: "#fff", opacity: 0.85 }}>
+              导出
+            </Link>
+          )}
           {isAdmin && (
             <Link to="/admin/config" style={{ color: "#fff", opacity: 0.85 }}>
               配置管理
@@ -222,8 +294,16 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
             />
           </Space>
           <Typography.Text style={{ color: "#fff" }}>
-            {session?.login_name ? `用户: ${session.login_name}` : "未登录"} | 门诊号: {patientNo || "-"}
+          {session?.login_name ? `用户: ${session.display_name || session.login_name}` : "未登录"} | 门诊号: {patientNo || "-"}
           </Typography.Text>
+          {canSwitchDept && (
+            <Button size="small" onClick={() => setDeptModalOpen(true)} ghost>
+              科室: {session?.dept_name || session?.dept_his_code || session?.dept_code || "-"}
+            </Button>
+          )}
+          <Button size="small" onClick={handleLogout}>
+            退出
+          </Button>
         </Space>
       </Header>
       <Layout>
@@ -318,6 +398,33 @@ export default function AppLayout({ children, patientNo, showFormNav, sectionSta
           {children}
         </Content>
       </Layout>
+      <Modal
+        title="切换科室"
+        open={deptModalOpen}
+        onCancel={() => setDeptModalOpen(false)}
+        onOk={handleSwitchDept}
+        confirmLoading={deptSwitching}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+            仅可切换到已授权的科室
+          </Typography.Paragraph>
+          <Select
+            showSearch
+            filterOption={(input, option) => (option?.value || "").toLowerCase().includes(input.toLowerCase())}
+            value={selectedDept || undefined}
+            options={deptOptions}
+            placeholder="选择科室"
+            onFocus={() => {
+              if (!deptOptions.length) void loadDeptOptions();
+            }}
+            onChange={(v) => setSelectedDept(v)}
+            style={{ width: "100%" }}
+            optionFilterProp="label"
+          />
+        </Space>
+      </Modal>
     </Layout>
   );
 }

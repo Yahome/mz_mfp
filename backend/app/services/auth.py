@@ -38,8 +38,12 @@ class SessionManager:
         self,
         *,
         login_name: str,
-        doc_code: str,
+        his_id: str,
+        doc_code: Optional[str] = None,
         dept_code: str,
+        dept_his_code: Optional[str] = None,
+        display_name: Optional[str] = None,
+        dept_name: Optional[str] = None,
         roles: Iterable[str],
         patient_no: Optional[str] = None,
     ) -> tuple[str, SessionPayload]:
@@ -47,8 +51,12 @@ class SessionManager:
         expires_at = issued_at + timedelta(minutes=self.ttl_minutes)
         payload = SessionPayload(
             login_name=login_name,
-            doc_code=doc_code,
+            his_id=his_id,
+            doc_code=doc_code or his_id,
             dept_code=dept_code,
+            dept_his_code=dept_his_code,
+            display_name=display_name,
+            dept_name=dept_name,
             roles=[role.lower() for role in roles],
             patient_no=patient_no,
             issued_at=issued_at,
@@ -179,7 +187,7 @@ def validate_patient_access(
         return str(value).strip()
 
     if _normalize_code(session.dept_code) != _normalize_code(visit_context.dept_code) or _normalize_code(
-        session.doc_code
+        session.his_id or session.doc_code
     ) != _normalize_code(visit_context.doc_code):
         raise AppError(
             code="forbidden",

@@ -10,6 +10,8 @@ from app.core.config import Settings, get_settings
 from app.core.db import get_db
 from app.core.errors import AppError
 from app.models.user import AppUser, AppUserDept, AppUserRole
+from app.models.dept import AppDept
+from app.models.visit_index import VisitIndex
 from app.schemas.auth import DeptListResponse, DeptOption, LoginRequest, SessionPayload, SwitchDeptRequest
 from app.services.auth import (
     SESSION_COOKIE_NAME,
@@ -51,6 +53,7 @@ def his_jump(
     sign: Optional[str] = Query(None, description="小写 hex 签名"),
     settings: Settings = Depends(get_settings),
     session_manager: SessionManager = Depends(get_session_manager),
+    db: Session = Depends(get_db),
 ) -> Response:
     if not settings.allow_unsigned_his_jump:
         if timestamp is None or sign is None:
@@ -72,10 +75,24 @@ def his_jump(
     else:
         logger.warning("his-jump 验签已临时放行（allow_unsigned_his_jump=true）")
 
+    dept_name = (
+        db.execute(
+            select(VisitIndex.jzks)
+            .where(VisitIndex.dept_his_code == dept_code)
+            .order_by(VisitIndex.visit_time.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+
     token, _ = session_manager.create_session(
         login_name=doc_code,
+        his_id=doc_code,
         doc_code=doc_code,
         dept_code=dept_code,
+        dept_his_code=dept_code,
+        dept_name=dept_name,
         roles=["doctor"],
         patient_no=patient_no,
     )
@@ -125,10 +142,27 @@ def login(
     user.dept_code = default_dept
     db.commit()
 
+    dept_name = None
+    if default_dept:
+        dept_name = (
+            db.execute(
+                select(VisitIndex.jzks)
+                .where(VisitIndex.dept_his_code == default_dept)
+                .order_by(VisitIndex.visit_time.desc())
+                .limit(1)
+            )
+            .scalars()
+            .first()
+        )
+
     token, session = session_manager.create_session(
         login_name=user.login_name or payload.login_name,
+        his_id=user.his_id or user.doc_code,
         doc_code=user.doc_code,
         dept_code=default_dept,
+        dept_his_code=default_dept,
+        display_name=user.display_name,
+        dept_name=dept_name,
         roles=roles,
         patient_no=None,
     )
@@ -162,8 +196,35 @@ def require_patient_access(
 
 
 @auth_router.get("/me", response_model=SessionPayload)
-def me(session: SessionPayload = Depends(require_session)) -> SessionPayload:
-    return session
+def me(
+    db: Session = Depends(get_db),
+    session: SessionPayload = Depends(require_session),
+) -> SessionPayload:
+    payload = session.model_dump()
+    user = (
+        db.execute(select(AppUser).where(AppUser.login_name == session.login_name))
+        .scalars()
+        .first()
+    )
+    if user:
+        payload["display_name"] = payload.get("display_name") or user.display_name
+        payload["his_id"] = payload.get("his_id") or user.his_id or user.doc_code
+        payload["doc_code"] = payload.get("doc_code") or user.doc_code
+        payload["dept_code"] = payload.get("dept_code") or (user.dept_code or "")
+        payload["dept_his_code"] = payload.get("dept_his_code") or (user.dept_code or "")
+        if not payload.get("dept_name") and payload.get("dept_his_code"):
+            dept_name = (
+                db.execute(
+                    select(VisitIndex.jzks)
+                    .where(VisitIndex.dept_his_code == payload["dept_his_code"])
+                    .order_by(VisitIndex.visit_time.desc())
+                    .limit(1)
+                )
+                .scalars()
+                .first()
+            )
+            payload["dept_name"] = dept_name
+    return SessionPayload(**payload)
 
 
 @auth_router.get("/depts", response_model=DeptListResponse)
@@ -181,9 +242,13 @@ def list_depts(
         dept_codes = [user.dept_code, *dept_codes]
 
     unique_codes = sorted({code for code in dept_codes if code and code.strip()})
+    name_map = {}
+    if unique_codes:
+        rows = db.execute(select(AppDept.dept_code, AppDept.dept_name).where(AppDept.dept_code.in_(unique_codes))).all()
+        name_map = {str(row.dept_code): row.dept_name for row in rows}
     return DeptListResponse(
         current_dept_code=session.dept_code,
-        depts=[DeptOption(dept_code=code) for code in unique_codes],
+        depts=[DeptOption(dept_code=code, dept_name=name_map.get(code)) for code in unique_codes],
     )
 
 
@@ -221,10 +286,25 @@ def switch_dept(
     user.dept_code = target
     db.commit()
 
+    dept_name = (
+        db.execute(
+            select(VisitIndex.jzks)
+            .where(VisitIndex.dept_his_code == target)
+            .order_by(VisitIndex.visit_time.desc())
+            .limit(1)
+        )
+        .scalars()
+        .first()
+    )
+
     token, new_session = session_manager.create_session(
         login_name=session.login_name,
+        his_id=session.his_id,
         doc_code=session.doc_code,
         dept_code=target,
+        dept_his_code=target,
+        display_name=session.display_name,
+        dept_name=dept_name,
         roles=session.roles,
         patient_no=None,
     )
@@ -247,8 +327,12 @@ def renew_session(
 ) -> SessionPayload:
     token, new_session = session_manager.create_session(
         login_name=session.login_name,
+        his_id=session.his_id,
         doc_code=session.doc_code,
         dept_code=session.dept_code,
+        dept_his_code=session.dept_his_code or session.dept_code,
+        display_name=session.display_name,
+        dept_name=session.dept_name,
         roles=session.roles,
         patient_no=session.patient_no,
     )

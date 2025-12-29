@@ -21,8 +21,12 @@ import { statusLabel, statusTagColor, type RecordStatus } from "@/utils/status";
 
 type SessionPayload = {
   login_name: string;
-  doc_code: string;
+  his_id: string;
+  doc_code?: string | null;
   dept_code: string;
+  dept_his_code?: string | null;
+  display_name?: string | null;
+  dept_name?: string | null;
   roles: string[];
 };
 
@@ -31,6 +35,8 @@ type VisitListItem = {
   visit_time: string;
   xm?: string | null;
   dept_code?: string | null;
+  dept_his_code?: string | null;
+  his_id?: string | null;
   doc_code?: string | null;
   dept_name?: string | null;
   doc_name?: string | null;
@@ -105,6 +111,12 @@ export default function VisitList() {
   const [patientName, setPatientName] = useState<string>("");
   const [deptCode, setDeptCode] = useState<string>("");
   const [docCode, setDocCode] = useState<string>("");
+  const [deptDisplay, setDeptDisplay] = useState<string>("");
+  const [docDisplay, setDocDisplay] = useState<string>("");
+  const [deptOptions, setDeptOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [docOptions, setDocOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const deptDebounceRef = useRef<number | null>(null);
+  const docDebounceRef = useRef<number | null>(null);
   const [status, setStatus] = useState<string>("");
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(20);
@@ -124,9 +136,21 @@ export default function VisitList() {
     const resp = await apiClient.get<SessionPayload>("/auth/me", { withCredentials: true });
     setSession(resp.data);
     const elevated = (resp.data.roles || []).includes("admin") || (resp.data.roles || []).includes("qc");
+    const hisId = resp.data.his_id || resp.data.doc_code || "";
+    const deptHis = resp.data.dept_his_code || resp.data.dept_code || "";
+    const docName = resp.data.display_name || hisId;
+    const deptName = resp.data.dept_name || deptHis;
+    setDocDisplay(docName);
+    setDeptDisplay(deptName);
+    if (deptHis) {
+      setDeptOptions([{ value: deptHis, label: deptName || deptHis }]);
+    }
+    if (hisId) {
+      setDocOptions([{ value: hisId, label: docName || hisId }]);
+    }
     if (!elevated) {
-      setDeptCode(resp.data.dept_code);
-      setDocCode(resp.data.doc_code);
+      setDeptCode(deptHis);
+      setDocCode(hisId);
     }
   };
 
@@ -150,7 +174,9 @@ export default function VisitList() {
       if (outpatientNo) params.outpatient_no = outpatientNo;
       if (patientName) params.patient_name = patientName;
       if (status) params.status = status;
-      if (deptCode) params.dept_code = deptCode;
+      if (deptCode) {
+        params.dept_his_code = deptCode;
+      }
       if (docCode) params.doc_code = docCode;
 
       const resp = await apiClient.get<VisitListResponse>("/mz_mfp/records", {
@@ -217,6 +243,22 @@ export default function VisitList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchDeptOptions = async (keyword: string) => {
+    const resp = await apiClient.get<{ items: { code: string; name?: string | null }[] }>("/mz_mfp/depts/search", {
+      params: { q: keyword, limit: 20 },
+      withCredentials: true,
+    });
+    setDeptOptions(resp.data.items.map((item) => ({ value: item.code, label: item.name || item.code })));
+  };
+
+  const fetchDocOptions = async (keyword: string, deptHis?: string) => {
+    const resp = await apiClient.get<{ items: { code: string; name?: string | null }[] }>("/mz_mfp/doctors/search", {
+      params: { q: keyword, limit: 20, dept_his_code: deptHis || undefined },
+      withCredentials: true,
+    });
+    setDocOptions(resp.data.items.map((item) => ({ value: item.code, label: item.name || item.code })));
+  };
+
   return (
     <Space direction="vertical" size="large" style={{ width: "100%" }}>
       <Card>
@@ -274,21 +316,59 @@ export default function VisitList() {
               />
             </Form.Item>
             <Form.Item label="科室" tooltip={!isElevated ? "医生角色固定科室条件" : undefined}>
-              <Input
-                value={deptCode}
-                onChange={(e) => setDeptCode(e.target.value)}
+              <Select
+                showSearch
+                filterOption={false}
+                value={deptCode || undefined}
+                onChange={(value, option: any) => {
+                  const normalized = value || "";
+                  setDeptCode(normalized);
+                  setDeptDisplay(option?.label || "");
+                  if (!isElevated) return;
+                  void fetchDocOptions("", normalized).catch(() => undefined);
+                }}
+                onSearch={(value) => {
+                  if (deptDebounceRef.current) window.clearTimeout(deptDebounceRef.current);
+                  deptDebounceRef.current = window.setTimeout(() => {
+                    if (!isElevated) return;
+                    void fetchDeptOptions(value).catch(() => undefined);
+                  }, 200);
+                }}
+                onFocus={() => {
+                  if (!isElevated) return;
+                  void fetchDeptOptions("").catch(() => undefined);
+                }}
                 disabled={!isElevated}
-                placeholder={isElevated ? "dept_code" : undefined}
-                style={{ width: 140 }}
+                placeholder={isElevated ? "科室（远程检索）" : undefined}
+                options={deptOptions}
+                style={{ width: 160 }}
               />
             </Form.Item>
             <Form.Item label="医生" tooltip={!isElevated ? "医生角色固定医生条件" : undefined}>
-              <Input
-                value={docCode}
-                onChange={(e) => setDocCode(e.target.value)}
+              <Select
+                showSearch
+                filterOption={false}
+                value={docCode || undefined}
+                onChange={(value, option: any) => {
+                  const normalized = value || "";
+                  setDocCode(normalized);
+                  setDocDisplay(option?.label || "");
+                }}
+                onSearch={(value) => {
+                  if (docDebounceRef.current) window.clearTimeout(docDebounceRef.current);
+                  docDebounceRef.current = window.setTimeout(() => {
+                    if (!isElevated) return;
+                    void fetchDocOptions(value, deptCode).catch(() => undefined);
+                  }, 200);
+                }}
+                onFocus={() => {
+                  if (!isElevated) return;
+                  void fetchDocOptions("", deptCode).catch(() => undefined);
+                }}
                 disabled={!isElevated}
-                placeholder={isElevated ? "doc_code" : undefined}
-                style={{ width: 160 }}
+                placeholder={isElevated ? "医生（远程检索）" : undefined}
+                options={docOptions}
+                style={{ width: 180 }}
               />
             </Form.Item>
             <Form.Item>
@@ -337,7 +417,7 @@ export default function VisitList() {
                 title: "医生",
                 dataIndex: "doc_name",
                 width: 180,
-                render: (value: string | null | undefined, row) => value || row.doc_code || "-",
+                render: (value: string | null | undefined, row) => value || row.his_id || row.doc_code || "-",
               },
               {
                 title: "状态",

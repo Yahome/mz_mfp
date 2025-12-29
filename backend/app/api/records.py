@@ -13,7 +13,7 @@ from app.core.db import get_db
 from app.schemas.auth import SessionPayload
 from app.schemas.qc import RecordQcResponse
 from app.schemas.records import RecordResponse, RecordSaveRequest
-from app.schemas.visits import VisitListResponse
+from app.schemas.visits import DoctorSearchResponse, VisitListResponse, DeptSearchResponse
 from app.services.external import ExternalDataAdapter
 from app.services.qc import QcService
 from app.services.records import RecordService
@@ -49,8 +49,8 @@ def list_records(
     to_date: date = Query(..., alias="to", description="接诊结束日期（含）"),
     outpatient_no: Optional[str] = Query(None, description="门诊号（精确匹配，=patient_no）"),
     patient_name: Optional[str] = Query(None, description="患者姓名（模糊匹配）"),
-    dept_code: Optional[str] = Query(None, description="科室代码（医务科/质控可用）"),
-    doc_code: Optional[str] = Query(None, description="医生代码（医务科/质控可用）"),
+    dept_his_code: Optional[str] = Query(None, description="科室 HIS 代码"),
+    doc_code: Optional[str] = Query(None, description="医生 HIS 代码"),
     status: Optional[str] = Query(None, description="draft/submitted/not_created"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=200),
@@ -62,7 +62,7 @@ def list_records(
         to_date=to_date,
         outpatient_no=outpatient_no,
         patient_name=patient_name,
-        dept_code=dept_code,
+        dept_his_code=dept_his_code,
         doc_code=doc_code,
         status=status,
         page=page,
@@ -116,3 +116,24 @@ def reset_record(
     service: RecordService = Depends(get_record_service),
 ) -> dict[str, object]:
     return service.reset_patient(patient_no=patient_no, session=session)
+
+
+@router.get("/depts/search", response_model=DeptSearchResponse)
+def search_depts(
+    q: str = Query("", description="按科室编码/名称模糊查询"),
+    limit: int = Query(20, ge=1, le=200),
+    _session: SessionPayload = Depends(require_session),
+    service: VisitListService = Depends(get_visit_list_service),
+) -> DeptSearchResponse:
+    return service.search_depts(query=q, limit=limit)
+
+
+@router.get("/doctors/search", response_model=DoctorSearchResponse)
+def search_doctors(
+    q: str = Query("", description="按医生编码/姓名模糊查询"),
+    limit: int = Query(20, ge=1, le=200),
+    dept_his_code: Optional[str] = Query(None, description="限定科室 HIS 编码"),
+    _session: SessionPayload = Depends(require_session),
+    service: VisitListService = Depends(get_visit_list_service),
+) -> DoctorSearchResponse:
+    return service.search_doctors(query=q, limit=limit, dept_his_code=dept_his_code)

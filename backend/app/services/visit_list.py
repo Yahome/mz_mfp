@@ -5,16 +5,18 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, Optional
 
 from fastapi import status
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from app.core.errors import AppError
 from app.models.record import Record
+from app.models.user import AppUser
+from app.models.dept import AppDept
 from app.models.visit_index import VisitIndex
 from app.schemas.auth import SessionPayload
-from app.schemas.visits import VisitListItem, VisitListResponse
+from app.schemas.visits import DoctorSearchResponse, SimpleCodeName, VisitListItem, VisitListResponse, DeptSearchResponse
 from app.services.external import ExternalDataAdapter
 from app.services.utils import as_str, clean_value, first_value
 
@@ -50,6 +52,7 @@ def _upsert_visit_rows(db: Session, rows: list[dict[str, Any]]) -> None:
                 "patient_no": row["patient_no"],
                 "visit_time": row["visit_time"],
                 "dept_code": row.get("dept_code"),
+                "dept_his_code": row.get("dept_his_code"),
                 "doc_code": row.get("doc_code"),
                 "xm": row.get("xm"),
                 "jzks": row.get("jzks"),
@@ -65,6 +68,7 @@ def _upsert_visit_rows(db: Session, rows: list[dict[str, Any]]) -> None:
             stmt = stmt.on_duplicate_key_update(
                 visit_time=stmt.inserted.visit_time,
                 dept_code=stmt.inserted.dept_code,
+                dept_his_code=stmt.inserted.dept_his_code,
                 doc_code=stmt.inserted.doc_code,
                 xm=stmt.inserted.xm,
                 jzks=stmt.inserted.jzks,
@@ -77,6 +81,7 @@ def _upsert_visit_rows(db: Session, rows: list[dict[str, Any]]) -> None:
                 set_={
                     "visit_time": stmt.excluded.visit_time,
                     "dept_code": stmt.excluded.dept_code,
+                    "dept_his_code": stmt.excluded.dept_his_code,
                     "doc_code": stmt.excluded.doc_code,
                     "xm": stmt.excluded.xm,
                     "jzks": stmt.excluded.jzks,
@@ -92,7 +97,8 @@ def _normalize_visit_row(row: Dict[str, Any]) -> Optional[dict[str, Any]]:
     if not patient_no or not isinstance(visit_time, datetime):
         return None
 
-    dept_code = as_str(first_value(row, ["JZKSDM", "jzksdm", "DEPT_CODE", "dept_code", "JZKSDMHIS", "jzksdmhis"]))
+    dept_code = as_str(first_value(row, ["JZKSDM", "jzksdm", "DEPT_CODE", "dept_code"]))
+    dept_his_code = as_str(first_value(row, ["JZKSDMHIS", "jzksdmhis", "DEPT_CODE_HIS", "dept_his_code"]))
     doc_code = as_str(first_value(row, ["JZYSDM", "jzysdm", "JZYS_DM", "jzys_dm", "DOC_CODE", "doc_code"]))
     xm = as_str(first_value(row, ["XM", "xm"]))
     jzks = as_str(first_value(row, ["JZKS", "jzks"]))
@@ -102,6 +108,7 @@ def _normalize_visit_row(row: Dict[str, Any]) -> Optional[dict[str, Any]]:
         "patient_no": patient_no,
         "visit_time": visit_time,
         "dept_code": clean_value(dept_code),
+        "dept_his_code": clean_value(dept_his_code),
         "doc_code": clean_value(doc_code),
         "xm": clean_value(xm),
         "jzks": clean_value(jzks),
@@ -115,8 +122,8 @@ class VisitListQuery:
     to_date: date
     outpatient_no: Optional[str] = None  # 门诊号（=patient_no）
     patient_name: Optional[str] = None  # 患者姓名（模糊）
-    dept_code: Optional[str] = None
-    doc_code: Optional[str] = None
+    dept_his_code: Optional[str] = None
+    doc_code: Optional[str] = None  # 医生 HIS 编码
     status: Optional[str] = None  # draft/submitted/not_created
     page: int = 1
     page_size: int = 20
@@ -130,7 +137,9 @@ class VisitListService:
     def list_visits(self, session: SessionPayload, query: VisitListQuery) -> VisitListResponse:
         self._sync_visit_index(query.from_date, query.to_date)
 
-        effective_dept, effective_doc = self._apply_role_filter(session, query.dept_code, query.doc_code)
+        effective_dept, effective_doc = self._apply_role_filter(
+            session, query.dept_his_code, query.doc_code
+        )
 
         from_dt, to_dt = _date_range_to_window(query.from_date, query.to_date)
         visit_cond = and_(VisitIndex.visit_time >= from_dt, VisitIndex.visit_time < to_dt)
@@ -141,6 +150,7 @@ class VisitListService:
                 VisitIndex.visit_time,
                 VisitIndex.xm,
                 VisitIndex.dept_code,
+                VisitIndex.dept_his_code,
                 VisitIndex.doc_code,
                 VisitIndex.jzks.label("dept_name"),
                 VisitIndex.jzys.label("doc_name"),
@@ -153,8 +163,12 @@ class VisitListService:
             .where(visit_cond)
         )
 
+        if query.dept_his_code:
+            stmt = stmt.where(VisitIndex.dept_his_code == query.dept_his_code.strip())
         if effective_dept:
-            stmt = stmt.where(VisitIndex.dept_code == effective_dept)
+            stmt = stmt.where(VisitIndex.dept_his_code == effective_dept)
+        if query.doc_code:
+            stmt = stmt.where(VisitIndex.doc_code == query.doc_code.strip())
         if effective_doc:
             stmt = stmt.where(VisitIndex.doc_code == effective_doc)
 
@@ -192,6 +206,8 @@ class VisitListService:
                     visit_time=row.visit_time,
                     xm=row.xm,
                     dept_code=row.dept_code,
+                    dept_his_code=row.dept_his_code,
+                    his_id=row.doc_code,
                     doc_code=row.doc_code,
                     dept_name=row.dept_name,
                     doc_name=row.doc_name,
@@ -215,17 +231,68 @@ class VisitListService:
         self.db.commit()
 
     def _apply_role_filter(
-        self, session: SessionPayload, dept_code: Optional[str], doc_code: Optional[str]
+        self,
+        session: SessionPayload,
+        dept_his_code: Optional[str],
+        doc_code: Optional[str],
     ) -> tuple[Optional[str], Optional[str]]:
         elevated = any(role in {"admin", "qc"} for role in session.roles)
         if elevated:
-            return (dept_code.strip() if dept_code else None, doc_code.strip() if doc_code else None)
+            return (
+                dept_his_code.strip() if dept_his_code else None,
+                doc_code.strip() if doc_code else None,
+            )
 
         # 医生：科室/医生固定
-        effective_dept = session.dept_code
-        effective_doc = session.doc_code
-        if dept_code and dept_code.strip() and dept_code.strip() != effective_dept:
+        effective_dept = (session.dept_his_code or session.dept_code or "").strip() or None
+        effective_doc = (session.his_id or session.doc_code or "").strip() or None
+        if dept_his_code and dept_his_code.strip() and effective_dept and dept_his_code.strip() != effective_dept:
             raise AppError(code="forbidden", message="无权切换科室条件", http_status=status.HTTP_403_FORBIDDEN)
-        if doc_code and doc_code.strip() and doc_code.strip() != effective_doc:
+        if doc_code and doc_code.strip() and effective_doc and doc_code.strip() != effective_doc:
             raise AppError(code="forbidden", message="无权切换医生条件", http_status=status.HTTP_403_FORBIDDEN)
         return effective_dept, effective_doc
+
+    def search_depts(self, query: str, limit: int = 20) -> DeptSearchResponse:
+        stmt = select(AppDept.dept_code, AppDept.dept_name, AppDept.spell).where(AppDept.active.is_(True))
+        if query and query.strip():
+            like = f"%{query.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    AppDept.dept_code.like(like),
+                    AppDept.dept_name.like(like),
+                    AppDept.spell.like(like),
+                )
+            )
+        stmt = stmt.order_by(AppDept.order_no.asc(), AppDept.dept_name.asc()).limit(limit)
+        rows = self.db.execute(stmt).all()
+        items: list[SimpleCodeName] = []
+        for row in rows:
+            code = as_str(row.dept_code)
+            if not code:
+                continue
+            items.append(SimpleCodeName(code=code, name=clean_value(row.dept_name)))
+        return DeptSearchResponse(items=items)
+
+    def search_doctors(self, query: str, limit: int = 20, dept_his_code: Optional[str] = None) -> DoctorSearchResponse:
+        stmt = select(AppUser.doc_code, AppUser.his_id, AppUser.display_name, AppUser.pinyin_code).where(AppUser.is_active.is_(True))
+        if dept_his_code and dept_his_code.strip():
+            stmt = stmt.where(AppUser.dept_code == dept_his_code.strip())
+        if query and query.strip():
+            like = f"%{query.strip()}%"
+            stmt = stmt.where(
+                or_(
+                    AppUser.doc_code.like(like),
+                    AppUser.login_name.like(like),
+                    AppUser.display_name.like(like),
+                    AppUser.pinyin_code.like(like),
+                )
+            )
+        stmt = stmt.order_by(AppUser.display_name.asc()).limit(limit)
+        rows = self.db.execute(stmt).all()
+        items: list[SimpleCodeName] = []
+        for row in rows:
+            code = as_str(row.his_id) or as_str(row.doc_code)
+            if not code:
+                continue
+            items.append(SimpleCodeName(code=code, name=clean_value(row.display_name)))
+        return DoctorSearchResponse(items=items)

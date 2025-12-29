@@ -5,8 +5,11 @@ import apiClient from "@/services/apiClient";
 
 type SessionPayload = {
   login_name: string;
-  doc_code: string;
+  his_id: string;
+  doc_code?: string | null;
   dept_code: string;
+  dept_his_code?: string | null;
+  display_name?: string | null;
   roles: string[];
   expires_at: string;
 };

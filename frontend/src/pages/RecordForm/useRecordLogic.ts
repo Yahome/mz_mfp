@@ -26,6 +26,13 @@ export type PrefillResponse = {
       wm_main?: DiagnosisRow[];
       wm_other?: DiagnosisRow[];
     };
+    herbs?: {
+      seq_no: number;
+      herb_type: string;
+      route_code: string;
+      route_name: string;
+      dose_count: number;
+    }[];
   };
 };
 
@@ -439,6 +446,8 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
         hzzs: asString(prefillResp.data.fields?.HZZS?.value),
       };
 
+      const herbPrefill = prefillResp?.data?.lists?.herbs || [];
+
       const baseInfo = recordResp
         ? {
             ...recordResp.payload.base_info,
@@ -527,7 +536,17 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
         setWmOther(reindexSeq(wmOtherPrefill));
         setTcmOps([]);
         setSurgeries([]);
-        setHerbRows([]);
+        setHerbRows(
+          reindexSeq(
+            herbPrefill.map((h) => ({
+              seq_no: h.seq_no,
+              herb_type: h.herb_type,
+              route_code: h.route_code,
+              route_name: h.route_name,
+              dose_count: h.dose_count,
+            })),
+          ),
+        );
       }
     } catch (err: any) {
       const httpStatus = err?.response?.status;

@@ -3,7 +3,6 @@ import AppLayout from "./layouts/AppLayout";
 import AppEntry from "./pages/AppEntry";
 import FrontendConfig from "./pages/FrontendConfig";
 import Login from "./pages/Login";
-import PrefillTest from "./pages/PrefillTest";
 import AdminResetPatient from "./pages/AdminResetPatient";
 import ExportReport from "./pages/ExportReport";
 
@@ -16,14 +15,6 @@ export default function App() {
         path="/app"
         element={
           <AppEntry />
-        }
-      />
-      <Route
-        path="/prefill-test"
-        element={
-          <AppLayout showFormNav={false}>
-            <PrefillTest />
-          </AppLayout>
         }
       />
       <Route

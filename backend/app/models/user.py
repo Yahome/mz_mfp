@@ -15,6 +15,8 @@ class AppUser(TimestampMixin, Base):
     doc_code: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
     dept_code: Mapped[str | None] = mapped_column(String(50), nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    his_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    pinyin_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
 
 

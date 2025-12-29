@@ -298,7 +298,7 @@ class RecordService:
             raise AppError(code="not_found", message="未找到就诊记录", http_status=status.HTTP_404_NOT_FOUND)
         base_map = dict(base_row)
         visit_context = VisitAccessContext(
-            dept_code=first_value(base_map, ["JZKSDM", "jzksdm", "DEPT_CODE", "dept_code", "JZKSDMHIS", "jzksdmhis"]),
+            dept_code=first_value(base_map, ["JZKSDMHIS", "jzksdmhis", "JZKSDM", "jzksdm", "DEPT_CODE", "dept_code"]),
             doc_code=first_value(base_map, ["JZYS_DM", "JZYSBM", "JZYSBM_CODE", "jzysdm", "DOC_CODE"]),
         )
         validate_patient_access(patient_no, session, visit_context)

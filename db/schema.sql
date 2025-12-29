@@ -320,6 +320,7 @@ CREATE TABLE `mz_mfp_visit_index` (
   `patient_no` varchar(50) NOT NULL COMMENT '病历号/就诊标识（=blh）',
   `visit_time` datetime NOT NULL COMMENT '就诊时间（JZSJ）',
   `dept_code` varchar(50) DEFAULT NULL COMMENT '就诊科室代码（来自外部视图）',
+  `dept_his_code` varchar(50) DEFAULT NULL COMMENT 'HIS 科室代码（JZKSDMHIS）',
   `doc_code` varchar(50) DEFAULT NULL COMMENT '接诊医生代码（来自外部视图）',
   `xm` varchar(100) DEFAULT NULL COMMENT '姓名（XM）',
   `jzks` varchar(100) DEFAULT NULL COMMENT '就诊科室名称（JZKS）',
@@ -329,5 +330,6 @@ CREATE TABLE `mz_mfp_visit_index` (
   PRIMARY KEY (`patient_no`),
   KEY `idx_visit_time` (`visit_time`),
   KEY `idx_dept_visit` (`dept_code`, `visit_time`),
+  KEY `idx_dept_his_visit` (`dept_his_code`, `visit_time`),
   KEY `idx_doc_visit` (`doc_code`, `visit_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

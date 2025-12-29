@@ -50,9 +50,9 @@ function formatGender(xb: string | undefined): string {
 function formatDoctorTitle(jzyszc: string | undefined): string {
   const v = (jzyszc || "").trim();
   if (!v) return "";
-  if (v === "1") return "主任";
-  if (v === "2") return "副主任";
-  if (v === "3") return "主治";
+  if (v === "1") return "主任医师";
+  if (v === "2") return "副主任医师";
+  if (v === "3") return "主治医师";
   if (v === "4") return "住院医师";
   return v;
 }
