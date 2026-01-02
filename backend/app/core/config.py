@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     app_env: str = "dev"
     log_level: str = "INFO"
 
+    user_operation_log_enabled: bool = True
+    user_operation_log_root_dir: str = r"C:\mz_mfp_log"
+    user_operation_log_error_message_max_len: int = 200
+
     mysql_dsn: str = Field(
         default="mysql+pymysql://user:pass@localhost:3306/mz_mfp?charset=utf8mb4",
         description="业务库连接串，使用 InnoDB/utf8mb4",

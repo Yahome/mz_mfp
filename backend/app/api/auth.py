@@ -20,6 +20,7 @@ from app.services.auth import (
     validate_his_signature,
     validate_patient_access,
 )
+from app.services.user_operation_log import UserOperationLogService
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,7 @@ def his_jump(
         roles=["doctor"],
         patient_no=patient_no,
     )
+    UserOperationLogService(settings).append_event(login_name=doc_code, event="login", result="success")
 
     redirect = RedirectResponse(
         url=f"/app?patient_no={patient_no}",
@@ -165,6 +167,11 @@ def login(
         dept_name=dept_name,
         roles=roles,
         patient_no=None,
+    )
+    UserOperationLogService(settings).append_event(
+        login_name=user.login_name or payload.login_name,
+        event="login",
+        result="success",
     )
     _set_session_cookie(response, token, settings)
     logger.info("User %s logged in via login endpoint", payload.login_name)
@@ -313,8 +320,23 @@ def switch_dept(
 
 
 @auth_router.post("/logout")
-def logout(response: Response) -> dict[str, str]:
+def logout(
+    request: Request,
+    response: Response,
+    settings: Settings = Depends(get_settings),
+    session_manager: SessionManager = Depends(get_session_manager),
+) -> dict[str, str]:
+    login_name = None
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+    if token:
+        try:
+            session = session_manager.decode(token)
+            login_name = session.login_name
+        except AppError:
+            login_name = None
     response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+    if login_name:
+        UserOperationLogService(settings).append_event(login_name=login_name, event="logout", result="success")
     return {"status": "logged_out"}
 
 
