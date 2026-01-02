@@ -233,7 +233,24 @@ export default function BaseInfoSection({ prefillMeta }: Props) {
           </Form.Item>
 
           <Form.Item className={styles.ticketItem} label="就诊类型" name={["base_info", "jzlx"]} rules={[{ required: true, message: "必填" }]}>
-            <DictRemoteSelect setCode="RC041" allowClear placeholder="远程检索" labelMode="name" resolveValueLabel />
+            <DictRemoteSelect
+              setCode="RC041"
+              allowClear
+              placeholder="远程检索"
+              labelMode="name"
+              resolveValueLabel
+              onChange={(val) => {
+                if (val === "1") {
+                  form.setFieldsValue({
+                    base_info: {
+                      ...form.getFieldValue("base_info"),
+                      jzhzfj: form.getFieldValue(["base_info", "jzhzfj"]),
+                      jzhzqx: form.getFieldValue(["base_info", "jzhzqx"]),
+                    },
+                  });
+                }
+              }}
+            />
           </Form.Item>
 
           <Form.Item className={styles.ticketItem} label="是否复诊" name={["base_info", "fz"]} rules={[{ required: true, message: "必填" }]}>
@@ -257,7 +274,7 @@ export default function BaseInfoSection({ prefillMeta }: Props) {
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   const jzlx = getFieldValue(["base_info", "jzlx"]);
-                  if (String(jzlx || "").trim() === "3" && !normalizeOptionalString(value)) {
+                  if (String(jzlx || "").trim() === "1" && !normalizeOptionalString(value)) {
                     return Promise.reject(new Error("急诊就诊类型下必填"));
                   }
                   return Promise.resolve();
@@ -277,7 +294,7 @@ export default function BaseInfoSection({ prefillMeta }: Props) {
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   const jzlx = getFieldValue(["base_info", "jzlx"]);
-                  if (String(jzlx || "").trim() === "3" && !normalizeOptionalString(value)) {
+                  if (String(jzlx || "").trim() === "1" && !normalizeOptionalString(value)) {
                     return Promise.reject(new Error("急诊就诊类型下必填"));
                   }
                   return Promise.resolve();
@@ -354,7 +371,19 @@ export default function BaseInfoSection({ prefillMeta }: Props) {
             className={styles.ticketItem}
             label="过敏药物"
             name={["base_info", "gmyw"]}
-            rules={[{ max: 500, message: "长度超限（最大 500）" }]}
+            dependencies={[["base_info", "ywgms"]]}
+            rules={[
+              { max: 500, message: "长度超限（最大 500）" },
+              ({ getFieldValue }) => ({
+                validator(_, value) {
+                  const ywgms = String(getFieldValue(["base_info", "ywgms"]) || "").trim();
+                  if (ywgms === "2" && !normalizeOptionalString(value)) {
+                    return Promise.reject(new Error("药物过敏史=有时必填"));
+                  }
+                  return Promise.resolve();
+                },
+              }),
+            ]}
           >
             <Input maxLength={500} />
           </Form.Item>

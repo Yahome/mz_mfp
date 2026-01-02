@@ -162,12 +162,77 @@ function reindexSeq<T extends { seq_no: number }>(rows: T[]): T[] {
   return rows.map((row, idx) => ({ ...row, seq_no: idx + 1 }));
 }
 
+const baseFieldLabelMap: Record<string, string> = {
+  "base_info.jzkh": "就诊卡号/病案号",
+  "base_info.xm": "姓名",
+  "base_info.xb": "性别",
+  "base_info.csrq": "出生日期",
+  "base_info.hy": "婚姻状况",
+  "base_info.gj": "国籍",
+  "base_info.mz": "民族",
+  "base_info.zjlb": "证件类别",
+  "base_info.zjhm": "证件号码",
+  "base_info.lxdh": "联系电话",
+  "base_info.jzsj": "就诊时间",
+  "base_info.bdsj": "报到时间",
+  "base_info.jzlx": "就诊类型",
+  "base_info.fz": "是否复诊",
+  "base_info.sy": "是否输液",
+  "base_info.mzmtbhz": "是否门诊慢特病患者",
+  "base_info.jzhzfj": "急诊分级",
+  "base_info.jzhzqx": "急诊患者去向",
+  "base_info.zyzkjsj": "住院证开具时间",
+  "base_info.ywgms": "药物过敏史",
+  "base_info.hzzs": "患者主诉",
+  "base_info.xzz": "现住址",
+  "base_info.gmyw": "过敏药物",
+};
+
 export function buildErrorMap(errors: FieldError[]): Record<string, string[]> {
   const map: Record<string, string[]> = {};
   for (const err of errors) {
     map[err.field] = map[err.field] ? [...map[err.field], err.message] : [err.message];
   }
   return map;
+}
+
+function formatFormErrors(err: any): string | null {
+  const errorFields = err?.errorFields;
+  if (!Array.isArray(errorFields) || !errorFields.length) return null;
+
+  const messages: string[] = [];
+  for (const field of errorFields) {
+    const namePath: string[] = field?.name || [];
+    const rawName = namePath.join(".");
+    const label = baseFieldLabelMap[rawName] || rawName || "字段";
+    const errs: string[] = field?.errors || [];
+    if (!errs.length) continue;
+    messages.push(`${label}: ${errs.join("、")}`);
+  }
+  return messages.length ? messages.join("；") : null;
+}
+
+function mapFormErrorFields(err: any): FieldError[] {
+  const errorFields = err?.errorFields;
+  if (!Array.isArray(errorFields) || !errorFields.length) return [];
+
+  const items: FieldError[] = [];
+  for (const field of errorFields) {
+    const namePath: string[] = field?.name || [];
+    const rawName = namePath.join(".");
+    const label = baseFieldLabelMap[rawName] || rawName || "字段";
+    const errs: string[] = field?.errors || [];
+    if (!errs.length) continue;
+    for (const msg of errs) {
+      items.push({
+        field: rawName,
+        message: `${label}: ${msg}`,
+        section: rawName.startsWith("base_info.") ? "base" : null,
+        seq_no: null,
+      });
+    }
+  }
+  return items;
 }
 
 function isEmptyDiagnosisRowValue(diagName: unknown, diagCode: unknown): boolean {
@@ -470,6 +535,12 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
             hzzs: asString(prefillResp.data.fields?.HZZS?.value),
           };
 
+      // 默认就诊类型：接诊科室包含“急诊”时默认为 1（急诊），否则默认为 2
+      if (!normalizeOptionalString(baseInfo.jzlx)) {
+        const deptName = asString(baseInfo.jzks);
+        baseInfo.jzlx = /急诊/.test(deptName) ? "1" : "2";
+      }
+
       form.setFieldsValue({ base_info: baseInfo } as BaseInfoFormValues);
 
       const prefillDiagnoses = prefillResp?.data?.lists?.diagnoses;
@@ -607,6 +678,31 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
     const values = await form.validateFields();
 
     const localErrors: FieldError[] = [];
+    const visitType = normalizeOptionalString(values.base_info?.jzlx);
+    if (visitType === "1") {
+      if (!normalizeOptionalString(values.base_info?.jzhzfj)) {
+        localErrors.push({
+          field: "base_info.jzhzfj",
+          message: "急诊患者分级: 急诊就诊类型下必填",
+          section: "base",
+        });
+      }
+      if (!normalizeOptionalString(values.base_info?.jzhzqx)) {
+        localErrors.push({
+          field: "base_info.jzhzqx",
+          message: "急诊患者去向: 急诊就诊类型下必填",
+          section: "base",
+        });
+      }
+    }
+    if (normalizeOptionalString(values.base_info?.ywgms) === "2" && !normalizeOptionalString(values.base_info?.gmyw)) {
+      localErrors.push({
+        field: "base_info.gmyw",
+        message: "过敏药物: 必填",
+        section: "base",
+      });
+    }
+
     localErrors.push(
       ...validateDiagnosisGroup({
         diagType: "tcm_disease_main",
@@ -826,7 +922,16 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
     } catch (err: any) {
       if (err?.message === "LOCAL_VALIDATION_FAILED") return;
       if (!err?.response) {
-        message.error(err?.message || "保存失败");
+        const formErrors = mapFormErrorFields(err);
+        if (formErrors.length) {
+          applyFieldErrors(formErrors);
+          message.error("校验失败，请查看提示");
+        } else {
+          const formMsg = formatFormErrors(err);
+          const msg = formMsg || err?.message || "保存失败";
+          setLoadError(msg);
+          message.error(msg);
+        }
         return;
       }
       await handleApiError(err);
@@ -852,7 +957,16 @@ export function useRecordLogic(opts: { patientNo: string; form: FormInstance<Bas
     } catch (err: any) {
       if (err?.message === "LOCAL_VALIDATION_FAILED") return;
       if (!err?.response) {
-        message.error(err?.message || "提交失败");
+        const formErrors = mapFormErrorFields(err);
+        if (formErrors.length) {
+          applyFieldErrors(formErrors);
+          message.error("校验失败，请查看提示");
+        } else {
+          const formMsg = formatFormErrors(err);
+          const msg = formMsg || err?.message || "提交失败";
+          setLoadError(msg);
+          message.error(msg);
+        }
         return;
       }
       await handleApiError(err);
